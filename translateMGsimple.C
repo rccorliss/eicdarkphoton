@@ -3,14 +3,18 @@ To avoid dependencies on anything complicated, we extract the TRootLHEF* stuff i
 a TTree composed only of standard root classes:
 
 */
+
+R__LOAD_LIBRARY(../ExRootAnalysis/lib/libExRootAnalysis.dylib)
+
+
 void translateMGsimple(TString core="ZZZ", TString evePath="EventsX/", int MDver=11, int nGoal=0) {
   
   //the particle conventions in LHEF are:
   int n_codes=6;
-  int lhef_code={-11,11,-13,13,22,100};//where the proton is hacked in, here, as '100'.
-  int hep_code={-11,11,-13,13,22,2212};//HEP conventions, I hope.
-  char lhef_letter={'e','e','u','u','g','p'};
-  int lhef_charge={+1,-1,+1,-1,0,+1};
+  int lhef_code[]={-11,11,-13,13,22,100};//where the proton is hacked in, here, as '100'.
+  int hep_code[]={-11,11,-13,13,22,2212};//HEP conventions, I hope.
+  char lhef_letter[]={'e','e','u','u','g','p'};
+  int lhef_charge[]={+1,-1,+1,-1,0,+1};
    
   //----This block loads the ExRootAnalysis library and reads in the tree----
   // Load shared library to read MadGraph-TTree
@@ -23,7 +27,7 @@ void translateMGsimple(TString core="ZZZ", TString evePath="EventsX/", int MDver
   // Create object of class ExRootTreeReader
   ExRootTreeReader *treeReader = new ExRootTreeReader(&chain);
   int maxEve = treeReader->GetEntries();
-  printf("see %d events in the tree, MDver=%d, th_e_max/deg=%.2f  nGoal=%d\n",maxEve,MDver,th_e_max,nGoal);
+  printf("see %d events in the tree, MDver=%d, nGoal=%d\n",maxEve,MDver,nGoal);
   assert(maxEve>10);
 
 
@@ -31,10 +35,16 @@ void translateMGsimple(TString core="ZZZ", TString evePath="EventsX/", int MDver
   TClonesArray *branchEvent = treeReader->UseBranch("Event");
   TClonesArray *branchParticle = treeReader->UseBranch("Particle");
 
-  mHfile=new TFile(evePath+core+".ttree.root","RECREATE","file with madgraph event tree");
+  TFile *mHfile=new TFile(evePath+core+".ttree.root","RECREATE","file with madgraph event tree");
   assert(mHfile->IsOpen());
 
-  mTree = new TTree("madTree","plain tree with madgraph events");
+  //some accumulators to make sure our math's right:
+  float totXsec=0;
+  float totXsec2=0;
+
+  
+  //construct our simple output tree branches:
+  TTree *mTree = new TTree("madTree","plain tree with madgraph events");
   const Int_t MaxPart=10;
   Int_t npart;
   Float_t weight_ub; //weight in ub.
@@ -57,7 +67,30 @@ void translateMGsimple(TString core="ZZZ", TString evePath="EventsX/", int MDver
   mTree->Branch("pz",pz,"pz[npart]/F");
   mTree->Branch("ene",ene,"ene[npart]/F");
   
- 
+
+
+  //calculate the proper lorentz transformations:
+  double prmass=938;
+  double prene=250e3;//note this needs to be synched up to the run_card.dat energy!
+  double dummymass=1;
+
+  //note that for XYZM the fourth coordinate is rest mass, not energy!
+  ROOT::Math::PxPyPzMVector pr; //proton beam in lab frame
+  pr.SetCoordinates(0,0,-prene,prmass);
+  ROOT::Math::PxPyPzMVector dummy; //proton beam in lab frame
+  dummy.SetCoordinates(0,0,0,dummymass);
+  
+  //find boost that gets us from lab frame to proton rest frame:
+  ROOT::Math::PxPyPzMVector::BetaVector betaToFixedTarget=pr.BoostToCM();
+  ROOT::Math::Boost boostLabToFixed(betaToFixedTarget);
+
+  //compute the boost back to the lab frame (these should be the  
+  ROOT::Math::PxPyPzMVector dummy_fixed=boostLabToFixed(dummy);
+  ROOT::Math::PxPyPzMVector::BetaVector betaFixedToLab=dummy_fixed.BoostToCM();
+  ROOT::Math::Boost boostFixedToLab(betaFixedToLab);
+
+  ROOT::Math::PxPyPzEVector p_fixed,p_lab; //particle 4vectors for use in the loop.  Note this is an 'E' not an 'M' assignment
+  
 
   for(int ieve=0;ieve<maxEve;ieve++) {
     // unpack MadGraph  TTree ......
@@ -81,19 +114,18 @@ void translateMGsimple(TString core="ZZZ", TString evePath="EventsX/", int MDver
 
 
 
-    npart=branchParticle->GetEntries();
+    npart=branchParticle->GetEntries()-2; //the first two particles are inbound, so we skip them.
     if(ieve<5) printf("eve=%d  weight=%e  nPart=%d\n",ieve,event->Weight,npart);
 
 
+    //loop over particles STARTING AT THE OUTBOUND ONES
     for(int ipart=0;ipart<npart;ipart++) {
-      if (ipart<2) continue;// particles 0 and 1 are in the incoming particles.  save to tree only outgoing partilces
-
-      TRootLHEFParticle *particle = (TRootLHEFParticle*) branchParticle->At(ipart); // creates a pointer to the 1st particle 
+      TRootLHEFParticle *particle = (TRootLHEFParticle*) branchParticle->At(ipart+2); // creates a pointer to the 1st particle 
       int myPID=particle->PID;
       if(myPID==100) myPID=2212; // change proton to Geant HEP convention.  Is this still needed?  If proton was specially defined here, it wouldn't have gotten the proper ID, so maybe.
       // http://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
       // 11=e-,  gam=22, 2212=p
-      assert(myPID==11 || myPID==11 || myPID==-11 || myPID==2212 || myPID==101 || myPID==22);
+      // commented out to allow other final states: assert(myPID==11 || myPID==11 || myPID==-11 || myPID==2212 || myPID==101 || myPID==22);
 
       
       pid[ipart]=myPID;
@@ -106,10 +138,13 @@ void translateMGsimple(TString core="ZZZ", TString evePath="EventsX/", int MDver
       }
 
       //in GeV, presumably
-      px[ipart]=particle->Px;
-      py[ipart]=particle->Py;
-      pz[ipart]=particle->Pz;
-      ene[ipart]=particle->E;
+      p_fixed.SetCoordinates(particle->Px,particle->Py,particle->Pz,particle->E);
+      p_lab=boostFixedToLab(p_fixed);
+      
+      px[ipart]=p_lab.X();
+      py[ipart]=p_lab.Y();
+      pz[ipart]=p_lab.Z();
+      ene[ipart]=p_lab.E();
       
 
     }// one event is unpacked & saved
@@ -125,9 +160,8 @@ void translateMGsimple(TString core="ZZZ", TString evePath="EventsX/", int MDver
 
   mTree->Write();
 
-  printf("\ntotal, nInp=%d, nAcc=%d, acc Xsect(pb)=%.4g, core=%s, thMax/deg=%f\n",ieve,nAcc,totXsec,core.Data(),th_e_max);
-  double eps=totXsec2/nAcc/totXsec-1.;
-  printf("\n test of weights acc Xsect2(pb)=%.4g  eps=%.4g\n",totXsec2/nAcc,eps);
+  double eps=totXsec2/totXsec-1.;
+  printf("\n test of weights acc Xsect2(pb)=%.4g  eps=%.4g\n",totXsec2,eps);
   assert( fabs(eps)<0.01);
 
 }
