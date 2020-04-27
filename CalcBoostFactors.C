@@ -42,26 +42,34 @@ void CalcBoostFactors(double elE=20e3, double prE=250e3){
 
 
  //find boost that gets us from cm frame to aprime frame in the simplest beam-->A' assumption:
-    ROOT::Math::PxPyPzMVector Aprime_cm;//Aprime vector in cm frame, for kinematic calculations. 
+  ROOT::Math::PxPyPzMVector Aprime_cm;//Aprime vector in cm frame, for kinematic calculations. 
   //assuming E>>mass, easy soln:
   //pA=pP+pE (mag of momentum)
   //pA+pP+pE=pCM (energy terms)
-  //hence pA=0.5*pCM 
-    Aprime_cm.SetCoordinates(0,0,cm_in_cm.T()/2,aprimemass);
-  ROOT::Math::PxPyPzMVector::BetaVector betaToAp=Aprime_cm.BoostToCM();
-  ROOT::Math::Boost boostCmToAp(betaToAp);
-  ROOT::Math::PxPyPzMVector cm_in_ap=boostCmToAp(cm_in_cm);
-  ROOT::Math::PxPyPzMVector::BetaVector betaFromAp=cm_in_ap.BoostToCM();
-  ROOT::Math::Boost boostApToCM(betaFromAp);
+  //hence pA=0.5*pCM
 
-
+  const int nmasses=12;
+  float testmass[nmasses]={17,50,100,200,500,1000,2000,5000,10000,20000,30000,40000};
+  float symangle[nmasses];
+  for (int i=0;i<nmasses;i++){
+    Aprime_cm.SetCoordinates(0,0,cm_in_cm.T()/2,testmass[i]);
+    ROOT::Math::PxPyPzMVector::BetaVector betaToAp=Aprime_cm.BoostToCM();
+    ROOT::Math::Boost boostCmToAp(betaToAp);
+    ROOT::Math::PxPyPzMVector cm_in_ap=boostCmToAp(cm_in_cm);
+    ROOT::Math::PxPyPzMVector::BetaVector betaFromAp=cm_in_ap.BoostToCM();
+    ROOT::Math::Boost boostApToCM(betaFromAp);
 
   //compute the symmetric decay angle in the lab frame:
   ROOT::Math::PxPyPzMVector decay_ap;//symmetric decay electron in aprime frame.
-  decay_ap.SetCoordinates(0,250,0,elmass);//at right angles to the boost direction
+  decay_ap.SetCoordinates(0,testmass[i]/2,0,elmass);//at right angles to the boost direction
   //now boost that decay particle all the way back to the lab frame:
-  ROOT::Math::PxPyPzMVector decay_lab=boostCmToLab(boostApToCM(decay_ap));
-
+  ROOT::Math::PxPyPzMVector decay_cm=boostApToCM(decay_ap);
+  ROOT::Math::PxPyPzMVector decay_lab=boostCmToLab(decay_cm));
+  symangle[i]=atan2(decay_lab.Y(),decay_lab.Z())/radperdeg;
+  }
+  TGraph *grAngle=new TGraph(nmasses,testmass,symangle);
+  grAngle->SetTitle("Lab frame symmetric angle for A' decay;mA [MeV];#theta [deg]");
+  grAngle->Draw();
 
   //compute the fixed-target angles corresponding to practical lab limits:
   //minimum and maximum electron angles in lab frame
@@ -105,8 +113,8 @@ void CalcBoostFactors(double elE=20e3, double prE=250e3){
   printf("ebeam_e=%f\tebeam_p=%f\n",el_fixed.Z(),pr_fixed.Z());
   printf("min angle %2.2fdeg (lab) = %2.4fdeg (fixed)\n",thetamindeg,thetamin_fixed);
   printf("max angle %2.2fdeg (lab) = %2.4fdeg (fixed)\n",thetamaxdeg,thetamax_fixed);
-  printf("symmetric decay in lab frame for mA=%f is theta(deg)=%f\n",
-	 aprimemass,atan2(decay_lab.Y(),decay_lab.Z())/radperdeg);
+  //    printf("symmetric decay in lab frame for mA=%f is theta(deg)=%f\n",
+  //	   aprimemass,atan2(decay_lab.Y(),decay_lab.Z())/radperdeg);
 
 
 }
