@@ -10,23 +10,30 @@
 ##########
 
 carddir="bgruncards"
-nJobs=100
+
+#how many jobs do you want to runfor each
+nJobs=1
+#what should the starting index be?  (lets me stack these)
+startat=0
 
 #move the original runcard somewhere safe, just in case we break something:
 cp Cards/run_card.dat Cards/backup_run_card.dat
 
 for outputname in `ls $carddir/`
   do
+      echo "running from $carddir/$outputname"
       cp $carddir/$outputname Cards/run_card.dat
       ./bin/newprocess
-      for ((job=0;job<nJobs;job=job+1)); do
+      for ((job=0+startat;job<nJobs+startat;job=job+1)); do
 	echo " "
 	echo "****************************"
-	echo "FIRE job  ", $iJob
+	echo "FIRE job  ", $job
 	echo "****************************"	
         time ./bin/generate_events 0 $outputname.$job
       done
-      
+
+      #add all the jobs together.  So long as they have the same number of requested events, the weights should combine correctly.
+      totJobs=`ls -1 Events/$outputname.*.ttree.root | wc -l`
       hadd Events/sum${nJobs}_$outputname.ttree.root Events/$outputname.*.ttree.root
   done
 
