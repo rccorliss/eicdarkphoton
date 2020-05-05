@@ -28,7 +28,8 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
   //kludgy, but I store this information in the filename:
   TString filenameT=filename;
   if (filenameT.Contains("sum")){
-    std::sscanf(filename,"sum%d_%*s",&nruns);
+    int startat=filenameT.Index("sum");
+    std::sscanf(filename+startat,"sum%d_%*s",&nruns);
   }
   float weightscale=1/(1.0*nruns);
   
