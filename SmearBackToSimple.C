@@ -2,6 +2,7 @@
 
 #include "smearHandBook.cxx"
 float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh **eve);
+void FixMomentumBug(const char* infile, const char* outfile);
 
 
 void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt"){
@@ -19,21 +20,28 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
    gSystem->Load("libeicsmear.so" );
 
    //convert the djangoh text file into a djangoh tree:
-   //done for this test: BuildTree(filename, ".", -1);
+   //done for this test:
+   //BuildTree(filename, ".", -1);
+   
 
   TString djTreeFilename=filename;
   djTreeFilename.ReplaceAll("djangoh.txt","djangoh.root");
 
+
+   TString fixedTreeFilename=djTreeFilename;
+   fixedTreeFilename.ReplaceAll("djangoh.root","fixed.djangoh.root");
+   FixMomentumBug(djTreeFilename.Data(),fixedTreeFilename.Data());
+
+  TChain unsmeared("EICTree");
+  unsmeared.Add(fixedTreeFilename.Data());
+   erhic::EventDjangoh* unEve(NULL);
+   unsmeared.SetBranchAddress("event", &unEve ); // Note &event, not event.
+  
   //gROOT->ProcessLine(".L smearHandBook.cxx");
    TString outputname=djTreeFilename;
    outputname.ReplaceAll("djangoh.root","smeared.root");
    //done for this test:  SmearTree(BuildHandBookDetector(),djTreeFilename,outputname.Data());
    
-   //guess our mass from the raw file:
-   TChain unsmeared("EICTree");
-   unsmeared.Add(djTreeFilename.Data());
-   erhic::EventDjangoh* unEve(NULL);
-   unsmeared.SetBranchAddress("event", &unEve ); // Note &event, not event.
 
    float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
 
@@ -221,3 +229,45 @@ float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh** eve){
   return 0; //if we didn't ever find a mass, assume it's zero.
 }
   
+void FixMomentumBug(const char* infile, const char * outfile){
+  TFile *badfile=new TFile(infile);
+  TTree *badtree=(TTree*)badfile->Get("EICTree");
+  erhic::EventDjangoh* eve(NULL);
+  badtree->SetBranchAddress("event", &eve);
+
+  TString patchname=infile;
+  patchname.ReplaceAll(".djangoh.root",".ttree.root");
+  TFile *patchfile=new TFile(patchname.Data());
+  TTree *mtree=(TTree*)patchfile->Get("madTree");
+  float ene[10],px[10],py[10],pz[10];
+  int pid[10];
+  mtree->SetBranchAddress("ene", &ene);
+  mtree->SetBranchAddress("px", &px);
+  mtree->SetBranchAddress("py", &py);
+  mtree->SetBranchAddress("pz", &pz);
+  mtree->SetBranchAddress("pid", &pid);
+
+
+  TFile *fixedfile=new TFile(outfile,"recreate");
+  TTree *newtree=badtree->CloneTree(0);
+  
+  int neve=badtree->GetEntries();
+  for (int i=0;i<neve;i++){
+    badtree->GetEntry(i);
+    mtree->GetEntry(i);
+    int npart=eve->GetNTracks();
+    for (int j=0;j<npart;j++){
+      //printf("v=(%f,%f,%f) e=%f\n",px[j],py[j],pz[j],ene[j]);
+      TLorentzVector v(px[j]/1e3,py[j]/1e3,pz[j]/1e3,ene[j]/1e3);
+      eve->GetTrack(j)->Set4Vector(v);
+      eve->GetTrack(j)->SetId(pid[j]);
+    }
+    newtree->Fill();
+  }
+  newtree->AutoSave();
+  delete badfile;
+  delete fixedfile;
+  delete patchfile;
+
+  return;
+}
