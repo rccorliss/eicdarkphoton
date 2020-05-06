@@ -1,8 +1,10 @@
 
-float GuessMass(TTree * t,int *npart, float *px,float *py,float *pz,int *pid);
+
+#include "smearHandBook.cxx"
+float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh **eve);
 
 
-void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.root"){
+void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt"){
 
   //const float mA=500;//MeV;
   const float mElec=0.511;//MeV;
@@ -16,16 +18,24 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   // Load the shared library, if not done automaticlly:
    gSystem->Load("libeicsmear.so" );
 
-   gROOT->ProcessLine(".L smearHandBook.cxx");
-   TString outputname=filename;
+   //convert the djangoh text file into a djangoh tree:
+   //done for this test: BuildTree(filename, ".", -1);
+
+  TString djTreeFilename=filename;
+  djTreeFilename.ReplaceAll("djangoh.txt","djangoh.root");
+
+  //gROOT->ProcessLine(".L smearHandBook.cxx");
+   TString outputname=djTreeFilename;
    outputname.ReplaceAll("djangoh.root","smeared.root");
-   SmearTree(BuildHandBookDetector(),filename,outputname.Data());
+   //done for this test:  SmearTree(BuildHandBookDetector(),djTreeFilename,outputname.Data());
    
    //guess our mass from the raw file:
    TChain unsmeared("EICTree");
-   unsmeared.Add(filename.Data());
+   unsmeared.Add(djTreeFilename.Data());
    erhic::EventDjangoh* unEve(NULL);
-   float bestGuessMass=GuessMassFromUnsmeared(unEve,unsmeared);
+   unsmeared.SetBranchAddress("event", &unEve ); // Note &event, not event.
+
+   float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
 
      printf("Building smeared oTree output from %s, which has a guessed mass of %fMeV\n",filename,bestGuessMass);
 
@@ -50,7 +60,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
    
    // Now associate the contents of the branch with the buffer.
    // The events are stored in a branch named event:
-   tree.SetBranchAddress("event", &event ); // Note &event, not event.
+   tree.SetBranchAddress("eventS", &event ); // Note &event, not event.
    
    int nEvents=tree.GetEntries();
 
@@ -72,7 +82,6 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   outputname.ReplaceAll("smeared.root","smeared.otree.root");
 
   TFile *ofile=TFile::Open(outputname.Data(),"RECREATE");
-
   TTree *oTree=new TTree("oTree","parsed tree for specific event structure");
   TVector3 p,e,es,P;//positron,electron,spec. electron, Proton
   TVector3 e0[2];//unsorted electrons;
@@ -87,7 +96,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   oTree->Branch("mA0",&mA0);
   oTree->Branch("mA1",&mA1);
   oTree->Branch("mA2",&mA1);
-  oTree->Branch("w",&weight_scaled); //still in ub!
+  oTree->Branch("w",&weight_scaled); //back into ub!
 
 
   // Loop over events:
@@ -102,14 +111,15 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
       //identify and sort the particles 
       int ne=0;//no electrons found to start
       for(int j=0; j < npart; ++j ) {
-         const Particle* particle = event->GetTrack(j);
+	Smear::ParticleMCS* particle = event->GetTrack(j);
+	if (particle==NULL) continue;
          // Let's just select charged pions for this example:
-         int pid = particle->GetPdgCode();
+	int pid = particle->Id().Code();
 	 TVector3 mom(particle->GetPx(),particle->GetPy(),particle->GetPz());
 	 if (pid==2212) P=mom; //proton;
 	 if (pid==-11) p=mom; //only one positron per event in this assumption;
 	 if (pid==11){
-	   e[ne]=mom;
+	   e0[ne]=mom;
 	   ne++;
 	 }
       }
@@ -132,16 +142,10 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 	  es=e0[j];
 	}
       }
-      weight_scaled=weight_ub*weightscale;
       mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
-    oTree->Fill();
+      oTree->Fill();
 
-      }
    }
-
-
-
-
 
   oTree->Write();
   ofile->Close();
@@ -150,58 +154,70 @@ return;
 }
 
 
-float GuessMassFromUnsmeared(TChain *t, erhic::EventMC* eve){
+float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh** eve){
   //look at the first few events to guess the most likely mass, if this is a signal set.
 
   int neve=t->GetEntries();
+  printf("found %d entries in tree\n",neve);
   float massguess[2];//both options from the first set
-  const float guessrange=1;//MeV we're allowed to be away and still be a good guess
+  const float guessrange=0.001;//GeV we're allowed to be away and still be a good guess
   const int winthreshold=5;//want >5 events within range to establish our 'right mass'
   
   int guesswins[2];//number of events that are within range of this guess.
   TVector3 p,e[2];
   
   for (int i=0;i<neve;i++){
+    if (i>100){
+      printf("died?\n");
+      break;
+    }
     t->GetEntry(i);
     p.SetXYZ(0,0,0);
     e[0].SetXYZ(0,0,0);
     e[1].SetXYZ(0,0,0);
 
     //identify our particles:
-    int npart=t->GetNTracks();
+    int npart=(*eve)->GetNTracks();
     int ne=0;//number of unsorted electrons in this event 0.
     for (int j=0;j<npart;j++){
-      const Particle* part = eve->GetTrack(j);
-      int pid = particle->GetPdgCode();
-      TVector3 mom(particle->GetPx(),particle->GetPy(),particle->GetPz());
+      Particle* part = (*eve)->GetTrack(j);
+      int pid = part->GetPdgCode();
+      TVector3 mom(part->GetPx(),part->GetPy(),part->GetPz());
       if (pid==2212) continue; //don't need the proton.
       if (pid==-11) p=mom; //only one positron per event in this assumption;
       if (pid==11){
 	e[ne]=mom;
 	ne++;
       }
-   
-      //calculate the masses of each combination:
-      for (int j=0;j<2;j++){
-	//float mtest=sqrt(mElec*mElec*2+2*p.Dot(e0[j]));//
-	float mtest=sqrt(-2*p.Dot(e[j])+2*p.Mag()*e[j].Mag());//neglecting rest mass of electrons
+    }
 
-	if (i==0){ //fill mass guesses on first event:
-	  massguess[j]=mtest;
-	  guesswins[j]=0;
-	} else{
-	  for (int k=0;k<2;k++){
-	    if (abs(mtest-massguess[k])<guessrange){
-	      guesswins[k]++;	  
-	    }
+    
+    //calculate the masses of each combination:
+    float mtemp[2];
+    for (int j=0;j<2;j++){
+      //float mtest=sqrt(mElec*mElec*2+2*p.Dot(e0[j]));//
+      float mtest=sqrt(-2*p.Dot(e[j])+2*p.Mag()*e[j].Mag());//neglecting rest mass of electrons
+      mtemp[j]=mtest;
+      if (i==0){ //fill mass guesses on first event:
+	massguess[j]=mtest;
+	guesswins[j]=0;
+      } else{
+	for (int k=0;k<2;k++){
+	  if (abs(mtest-massguess[k])<guessrange){
+	    guesswins[k]++;	  
 	  }
 	}
       }
-      for (int k=0;k<2;k++){
-	if (guesswins[k]>winthreshold) return massguess[k];
-      }
     }
 
+    printf("eve %d: npart=%d,ne=%d M0=%f\tM1=%f\te0=(%f,%f,%f), p=(%f,%f,%f)\n",i,npart,ne,mtemp[0],mtemp[1],e[0].X(),e[0].Y(),e[0].Z(),p.X(),p.Y(),p.Z());
+    for (int k=0;k<2;k++){
+      if (guesswins[k]>winthreshold) {
+	printf("after %d events, foudn a winning mass guess: m=%2.2f\n",i,massguess[k]);
+	return massguess[k];
+      }
+    }
+  }
   return 0; //if we didn't ever find a mass, assume it's zero.
 }
   
