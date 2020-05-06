@@ -20,8 +20,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
    gSystem->Load("libeicsmear.so" );
 
    //convert the djangoh text file into a djangoh tree:
-   //done for this test:
-   //BuildTree(filename, ".", -1);
+   BuildTree(filename, ".", -1);
    
 
   TString djTreeFilename=filename;
@@ -40,7 +39,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   //gROOT->ProcessLine(".L smearHandBook.cxx");
    TString outputname=djTreeFilename;
    outputname.ReplaceAll("djangoh.root","smeared.root");
-   //done for this test:  SmearTree(BuildHandBookDetector(),djTreeFilename,outputname.Data());
+   SmearTree(BuildHandBookDetector(),djTreeFilename,outputname.Data());
    
 
    float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
