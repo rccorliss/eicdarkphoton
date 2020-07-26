@@ -98,7 +98,7 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
   fprintf(djangoh,"============================================\n");
   fprintf(djangoh,"I,ievent,IChannel,process,subprocess,nucleon,struckparton,partontrack,y,Q2,x,W2,Nu,truey,trueQ2,truex,trueW2,trueNu,SIGtot (fb),errSIGtot (fb),Depol,9 structures, nrTracks\n");
   fprintf(djangoh,"============================================\n");
-  fprintf(djangoh,"I, 1=stable, CHEP PID, parent I, 0=stable, px, py, pz, E, m, x0,y0,z0\n");
+  fprintf(djangoh,"I, 1=stable, CHEP PID, parent I, first daughter, last daughter, px, py, pz, E, m, x0,y0,z0\n");
   fprintf(djangoh,"============================================\n");
 
 
@@ -162,14 +162,14 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
  
     // format:   fprintf(djangoh,"I,ievent,IChannel,process,subprocess,nucleon,struckparton,partontrack,y,Q2,x,W2,Nu,truey,trueQ2,truex,trueW2,trueNu,SIGtot (fb),errSIGtot,Depol,9 structures, nrTracks\n");
     fprintf(djangoh,"%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d",dj_I,i+1,dj_chan,dj_process,dj_subproc,dj_nucleon,dj_struck,dj_parton);
-    fprintf(djangoh,"\t%f\t%f\t%f\t%f\t%f",dj_y,dj_Q2,dj_x,dj_W2,dj_nu);//reco'd with fs eeffects?
+    fprintf(djangoh,"\t%f\t%f\t%f\t%f\t%f",dj_y,dj_Q2,dj_x,dj_W2,dj_nu);//reco'd with fs effects?
     fprintf(djangoh,"\t%f\t%f\t%f\t%f\t%f",dj_y,dj_Q2,dj_x,dj_W2,dj_nu);//true hard collision without radiative process?
     fprintf(djangoh,"\t%f\t%f\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t%d\n",weight_scaled*1e9,0.0,npart);
       fprintf(djangoh,"============================================\n");
 
 
     for (int j=0;j<npart;j++){
-      // format:   fprintf(djangoh,"I, 1=stable, CHEP PID, parent I, 0=stable, px, py, pz, E, m, x0,y0,z0\n");
+      // format:   fprintf(djangoh,"I, 1=stable, CHEP PID, parent I, 0=stable, 0=stable, px, py, pz, E, m, x0,y0,z0\n");
       fprintf(djangoh,"%d\t1\t%d\t0\t0\t%f\t%f\t%f\t%f\t%f\t0\t0\t0\n",j+1,pid[j],px[j]/1e3,py[j]/1e3,pz[j]/1e3,ene[j]/1e3,pid[j]==2212?pBeamMass:(mElec/1e3));
     }
   fprintf(djangoh,"=============== Event finished ===============\n");

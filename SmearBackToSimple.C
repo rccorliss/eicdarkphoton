@@ -1,6 +1,7 @@
 
 
 #include "smearHandBook.cxx"
+//#include "PerfectDetector.cxx"
 float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh **eve);
 void FixMomentumBug(const char* infile, const char* outfile);
 
@@ -15,6 +16,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   float ensum=elBeamEnergy+pBeamEnergy;
   float endiff=elBeamEnergy-pBeamEnergy;
   const float beamS=ensum*ensum-endiff*endiff;
+
      
   // Load the shared library, if not done automaticlly:
    gSystem->Load("libeicsmear.so" );
@@ -39,7 +41,8 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   //gROOT->ProcessLine(".L smearHandBook.cxx");
    TString outputname=djTreeFilename;
    outputname.ReplaceAll("djangoh.root","smeared.root");
-   SmearTree(BuildHandBookDetector(),djTreeFilename,outputname.Data());
+   SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
+   //SmearTree(BuildPerfectDetector(),fixedTreeFilename,outputname.Data());
    
 
    float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
@@ -50,9 +53,6 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
    // The TTrees are named EICTree. -- nope, smeared trees are called 'Smeared'
    // Create a TChain for trees with this name.
    TChain tree("Smeared");
-   
-   // Add the file(s) we want to analyse to the chain.
-   // We could add multiple files if we wanted.
    tree.Add(outputname.Data()); // Wild cards are allowed e.g. tree.Add("*.root" );
    
    // Create an object to store the current event from the tree.
@@ -107,19 +107,30 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 
 
   // Loop over events:
-   for(int i=0; i<nEvents; i++){  
+   for(int i=0; i<nEvents; i++){
+     //if (i>100) break; //debug.
       // Read the next entry from the tree.
       tree.GetEntry(i);
       unsmeared.GetEntry(i);//follow along with our unsmeared tree.  If we didn't need it separately, we could have made it a friend.
       
       int npart = event->GetNTracks();
       weight_scaled=unEve->sigTot*1e-9;//convert fb back into ub for oTree convention
+
+      //zero out our momenta:
+      e0[0].SetXYZ(0,0,0);
+      e0[1].SetXYZ(0,0,0);
+      p.SetXYZ(0,0,0);
+      P.SetXYZ(0,0,0);
+
       
       //identify and sort the particles 
       int ne=0;//no electrons found to start
       for(int j=0; j < npart; ++j ) {
 	Smear::ParticleMCS* particle = event->GetTrack(j);
-	if (particle==NULL) continue;
+	if (particle==NULL) {
+	  	 if (i<5) printf("found particle in ev=%d, j=%d/%d, (NULL POINTER)\n",i,j,npart);
+		 continue;
+	}
          // Let's just select charged pions for this example:
 	int pid = particle->Id().Code();
 	 TVector3 mom(particle->GetPx(),particle->GetPy(),particle->GetPz());
@@ -129,15 +140,17 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 	   e0[ne]=mom;
 	   ne++;
 	 }
+	 if (i<5) printf("found particle in ev=%d, j=%d/%d, pid=%d, p=(%f,%f,%f)\n",i,j,npart,pid,mom.X(),mom.Y(),mom.Z());
       }
 
-
-      //sort electrons by which electron+positron pair is closer to the correct mass:
-      float mdiff=9999; 
+    //sort electrons by which electron+positron pair is closer to the correct mass:
+      float mdiff=9999;
+      mA0=mA1=mA2=0;
+ 
       for (int j=0;j<2;j++){
 	//float mtest=sqrt(mElec*mElec*2+2*p.Dot(e0[j]));//
 	float mtest=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());//neglecting rest mass of electrons
-	//printf("found rest mass=%f\n",mtest);
+	if (i<5) printf("found rest mass=%f\n",mtest);
 	if (abs(mtest-bestGuessMass)<mdiff){//if we're closer in this pair than the other pair...
 	  mdiff=abs(mtest-bestGuessMass);
 	  mA1=mA0;
@@ -217,10 +230,10 @@ float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh** eve){
       }
     }
 
-    printf("eve %d: npart=%d,ne=%d M0=%f\tM1=%f\te0=(%f,%f,%f), p=(%f,%f,%f)\n",i,npart,ne,mtemp[0],mtemp[1],e[0].X(),e[0].Y(),e[0].Z(),p.X(),p.Y(),p.Z());
+    if (i<5) printf("eve %d: npart=%d,ne=%d M0=%f\tM1=%f\te0=(%f,%f,%f), p=(%f,%f,%f)\n",i,npart,ne,mtemp[0],mtemp[1],e[0].X(),e[0].Y(),e[0].Z(),p.X(),p.Y(),p.Z());
     for (int k=0;k<2;k++){
       if (guesswins[k]>winthreshold) {
-	printf("after %d events, foudn a winning mass guess: m=%2.2f\n",i,massguess[k]);
+	printf("after %d events, found a winning mass guess: m=%2.2f\n",i,massguess[k]);
 	return massguess[k];
       }
     }
@@ -252,11 +265,12 @@ void FixMomentumBug(const char* infile, const char * outfile){
   
   int neve=badtree->GetEntries();
   for (int i=0;i<neve;i++){
+    //for debugging only: if (i>100) break; //stop at the defined number of events.
     badtree->GetEntry(i);
     mtree->GetEntry(i);
     int npart=eve->GetNTracks();
     for (int j=0;j<npart;j++){
-      //printf("v=(%f,%f,%f) e=%f\n",px[j],py[j],pz[j],ene[j]);
+      if (i<5) printf("ev=%d, index=%d/%d: vec=(%f,%f,%f) ene=%f, pid=%d\n",i,j,npart,px[j],py[j],pz[j],ene[j],pid[j]);
       TLorentzVector v(px[j]/1e3,py[j]/1e3,pz[j]/1e3,ene[j]/1e3);
       eve->GetTrack(j)->Set4Vector(v);
       eve->GetTrack(j)->SetId(pid[j]);

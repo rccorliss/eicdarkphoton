@@ -4,7 +4,7 @@
 
 dirname=${$1%/}
 echo dirname: .$dirname.
-filelist=`ls ./$dirname/*.djangoh.txt`
+filelist=`ls ./$dirname/*gamma*.djangoh.txt`
 
 
 for filename in $filelist

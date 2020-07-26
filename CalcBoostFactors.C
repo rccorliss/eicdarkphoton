@@ -48,11 +48,13 @@ void CalcBoostFactors(double elE=20e3, double prE=250e3){
   //pA+pP+pE=pCM (energy terms)
   //hence pA=0.5*pCM
 
-  const int nmasses=12;
-  float testmass[nmasses]={17,50,100,200,500,1000,2000,5000,10000,20000,30000,40000};
+  const int nmasses=400;
+  float testmass[nmasses];//={17,50,100,200,500,1000,2000,5000,10000,20000,30000,40000};
   float symangle[nmasses];
   float symeta[nmasses];
+  float symMom[nmasses];
   for (int i=0;i<nmasses;i++){
+    testmass[i]=10+100*i;
     Aprime_cm.SetCoordinates(0,0,cm_in_cm.T()/2,testmass[i]);
     ROOT::Math::PxPyPzMVector::BetaVector betaToAp=Aprime_cm.BoostToCM();
     ROOT::Math::Boost boostCmToAp(betaToAp);
@@ -60,19 +62,28 @@ void CalcBoostFactors(double elE=20e3, double prE=250e3){
     ROOT::Math::PxPyPzMVector::BetaVector betaFromAp=cm_in_ap.BoostToCM();
     ROOT::Math::Boost boostApToCM(betaFromAp);
 
-  //compute the symmetric decay angle in the lab frame:
-  ROOT::Math::PxPyPzMVector decay_ap;//symmetric decay electron in aprime frame.
-  decay_ap.SetCoordinates(0,testmass[i]/2,0,elmass);//at right angles to the boost direction
-  //now boost that decay particle all the way back to the lab frame:
-  ROOT::Math::PxPyPzMVector decay_cm=boostApToCM(decay_ap);
-  ROOT::Math::PxPyPzMVector decay_lab=boostCmToLab(decay_cm);
-  TVector3 symdec(0,decay_lab.Y(),decay_lab.Z());
-  symangle[i]=symdec.Theta()/radperdeg;
-  symeta[i]=symdec.Eta();
+    //compute the symmetric decay angle in the lab frame:
+    ROOT::Math::PxPyPzMVector decay_ap;//symmetric decay electron in aprime frame.
+    decay_ap.SetCoordinates(0,testmass[i]/2,0,elmass);//at right angles to the boost direction
+    //now boost that decay particle all the way back to the lab frame:
+    ROOT::Math::PxPyPzMVector decay_cm=boostApToCM(decay_ap);
+    ROOT::Math::PxPyPzMVector decay_lab=boostCmToLab(decay_cm);
+    ROOT::Math::PxPyPzMVector decay_fixed=boostLabToFixed(decay_lab);
+    //TVector3 symdec(0,decay_lab.Y(),decay_lab.Z());
+    TVector3 symdec(0,decay_lab.Y(),decay_lab.Z());
+    symangle[i]=symdec.Theta()/radperdeg;
+    symeta[i]=-symdec.Eta();
+    symMom[i]=symdec.Mag();
   }
   TGraph *grAngle=new TGraph(nmasses,testmass,symeta);
-  grAngle->SetTitle("Lab frame symmetric #eta for A' decay;mA [MeV];#eta; [deg]");
+  grAngle->SetTitle("Lab frame symmetric #eta for A' decay;mA [MeV];#eta ;[deg]");
   grAngle->Draw();
+  TGraph *grMom=new TGraph(nmasses,testmass,symMom);
+  grMom->SetTitle("Lab frame symmetric momentum for A' decay;mA [MeV];p [MeV]");
+  //grMom->Draw();
+   TGraph *grMomAng=new TGraph(nmasses,symeta,symMom);
+   //grMomAng->SetTitle("Lab frame symmetric momentum for A' decay;#eta ;p [MeV]");
+   //grMomAng->Draw();
 
   //compute the fixed-target angles corresponding to practical lab limits:
   //minimum and maximum electron angles in lab frame
