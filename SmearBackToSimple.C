@@ -1,7 +1,7 @@
 
 
 #include "smearHandBook.cxx"
-//#include "PerfectDetector.cxx"
+#include "PerfectDetector.cxx"
 float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh **eve);
 void FixMomentumBug(const char* infile, const char* outfile);
 
@@ -151,9 +151,9 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 	e0[ne]=mom;
 	ne++;
       }
-      if (i<DebugEve) printf("found particle in ev=%d, j=%d/%d, pid=%d, p=(%f,%f,%f)\n",i,j,npart,pid,mom.X(),mom.Y(),mom.Z());
+      if (i<nDebugEve) printf("found particle in ev=%d, j=%d/%d, pid=%d, p=(%f,%f,%f)\n",i,j,npart,pid,mom.X(),mom.Y(),mom.Z());
     }
-    if (i<DebugEve) printf("total electrons=%d\n",ne);
+    if (i<nDebugEve) printf("total electrons=%d\n",ne);
 
     //sort electrons by which electron+positron pair is closer to the correct mass:
     mA0=mA1=mA2=0;
@@ -162,16 +162,16 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
     for (int j=0;j<2;j++){
       m[j]=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());
     }
-    if (i<DebugEve) printf("mass guesses:  %f and %f\n",m[0],m[1]);
+    if (i<nDebugEve) printf("mass guesses:  %f and %f\n",m[0],m[1]);
 
     if(ne==1 || (abs(m[0]-bestGuessMass)<abs(m[1]-bestGuessMass))){
-      if (i<DebugEve) printf("first guess is better.\n");
+      if (i<nDebugEve) printf("first guess is better.\n");
       mA0=m[0];
       mA1=m[1];
       e=e0[0];
       es=e0[1];
     } else {
-      if (i<DebugEve) printf("second guess is better.\n");
+      if (i<nDebugEve) printf("second guess is better.\n");
       mA0=m[1];
       mA1=m[0];
       e=e0[1];
@@ -180,6 +180,11 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
       
   
     mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
+
+    if (i<nDebugEve) printf("filling e=(%f,%f,%f) (mA0=%1.4f)\n",e.X(),e.Y(),e.Z(),mA0);
+    if (i<nDebugEve) printf("filling es=(%f,%f,%f) (mA1=%1.4f)\n",es.X(),es.Y(),es.Z(),mA1);
+
+    
     oTree->Fill();
 
   }
