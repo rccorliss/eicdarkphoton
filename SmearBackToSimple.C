@@ -30,8 +30,8 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 
 
    TString fixedTreeFilename=djTreeFilename;
-   fixedTreeFilename.ReplaceAll("djangoh.root","fixed.djangoh.root");
-   FixMomentumBug(djTreeFilename.Data(),fixedTreeFilename.Data());
+   //fixedTreeFilename.ReplaceAll("djangoh.root","fixed.djangoh.root");
+   //let's see if I got Ivica's fix right this time: FixMomentumBug(djTreeFilename.Data(),fixedTreeFilename.Data());
 
   TChain unsmeared("EICTree");
   unsmeared.Add(fixedTreeFilename.Data());
