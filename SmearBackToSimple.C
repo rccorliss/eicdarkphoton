@@ -95,6 +95,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   TTree *oTree=new TTree("oTree","parsed tree for specific event structure");
   TVector3 p,e,es,P;//positron,electron,spec. electron, Proton vectors, in mev
   TVector3 e0[2];//unsorted electrons;
+  TVector3 zero(0,0,0);
   float mA0,mA1,mA2;//inv. mass of three candidates (two good ones first, then same-charge one last)
   float m[2];//unsorted candidate masses.
   float weight_scaled; //scaled for the number of files we combined.  still in ub units.
@@ -106,7 +107,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   oTree->Branch("es",&es);
   oTree->Branch("mA0",&mA0);
   oTree->Branch("mA1",&mA1);
-  oTree->Branch("mA2",&mA1);
+  oTree->Branch("mA2",&mA2);
   oTree->Branch("w",&weight_scaled); //back into ub!
 
 
@@ -121,10 +122,12 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
       weight_scaled=unEve->sigTot*1e-9;//convert fb back into ub for oTree convention
 
       //zero out our momenta:
-      e0[0].SetXYZ(0,0,0);
-      e0[1].SetXYZ(0,0,0);
-      p.SetXYZ(0,0,0);
-      P.SetXYZ(0,0,0);
+      e0[0]=zero;
+      e0[1]=zero;
+      p=zero;
+      P=zero;
+      e=zero;
+      es=zero;
 
       
       //identify and sort the particles 
@@ -155,7 +158,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
     for (int j=0;j<2;j++){
       m[j]=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());
     }
-    if (abs(m[0]-bestGuessMass)<abs(m[1]-bestGuessMass)){
+    if(ne==1 || (abs(m[0]-bestGuessMass)<abs(m[1]-bestGuessMass))){
       mA0=m[0];
       mA1=m[1];
       e=e0[0];
@@ -239,7 +242,7 @@ float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh** eve){
     if (i<5) printf("eve %d: npart=%d,ne=%d M0=%f\tM1=%f\te0=(%f,%f,%f), p=(%f,%f,%f)\n",i,npart,ne,mtemp[0],mtemp[1],e[0].X(),e[0].Y(),e[0].Z(),p.X(),p.Y(),p.Z());
     for (int k=0;k<2;k++){
       if (guesswins[k]>winthreshold) {
-	printf("after %d events, found a winning mass guess: m=%2.2f\n",i,massguess[k]);
+	printf("after %d events, found a winning mass guess: m=%2.2fGeV = %2.2fMeV\n",i,massguess[k],massguess[k]*1e3);
 	return massguess[k]*1e3;//return the guess mass, converted back into MeV
       }
     }
