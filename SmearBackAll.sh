@@ -9,7 +9,7 @@ filelist=`ls ./$dirname/*.djangoh.txt`
 
 for filename in $filelist
   do
-      echo running silently:  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\"\\\) 
-      root -b -q SmearBackToSimple.C\(\"$filename\"\) >/dev/null 2>&1
+      echo running with errors silenced!  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\"\\\) 
+      root -b -q SmearBackToSimple.C\(\"$filename\"\) 2>/dev/null
 done
 exit
