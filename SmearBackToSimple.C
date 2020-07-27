@@ -138,6 +138,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
          // Let's just select charged pions for this example:
 	int pid = particle->Id().Code();
 	 TVector3 mom(particle->GetPx()*1e3,particle->GetPy()*1e3,particle->GetPz()*1e3);
+	 //note that we have converted back to MeV from GeV.
 	 if (pid==2212) P=mom; //proton;
 	 if (pid==-11) p=mom; //only one positron per event in this assumption;
 	 if (pid==11){
