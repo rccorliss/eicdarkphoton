@@ -24,6 +24,7 @@ alias ll='ls -Al' #because I use this habitually.
 cd eic_data_passthrough/
 #and now we can run the code
 root -l make_tree.C\(\"../sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt\"\)
+# or, rather, the shell script that parses things for me:
 
 #2) passthrough:  handles the copying from the passthrough folder to
 #the local folder, since there is an issue mounting the external folder.
@@ -34,6 +35,7 @@ vagrant ssh -- -X #(or just vagrant ssh.  The extra stuff is maybe necessary for
 #now you are inside the vm and can do the copying back and forth, eg:
 cp /osx_sphenix/eic_data_passthrough/*sh ./eic_data_passthrough/
 cp /osx_sphenix/eic_data_passthrough/*.C ./eic_data_passthrough/
+cp /osx_sphenix/eic_data_passthrough/*.djangoh* ./eic_data_passthrough/
 
 3) local machine
 

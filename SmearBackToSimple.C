@@ -20,6 +20,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
      
   // Load the shared library, if not done automaticlly:
    gSystem->Load("libeicsmear.so" );
+   erhic::DisKinematics::BoundaryWarning=false; //turn off the DIS check.  Not sure why I run afoul of it, but it yells an awful lot.
 
    //convert the djangoh text file into a djangoh tree:
    BuildTree(filename, ".", -1);

@@ -88,7 +88,7 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
   oTree->Branch("es",&es);
   oTree->Branch("mA0",&mA0);
   oTree->Branch("mA1",&mA1);
-  oTree->Branch("mA2",&mA1);
+  oTree->Branch("mA2",&mA2);
   oTree->Branch("w",&weight_scaled); //still in ub!
 
 
@@ -103,13 +103,16 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
 
 
 
-  
+  TVector3 zero(0,0,0);
   for (int i=0;i<neve;i++){
     mTree->GetEntry(i);
-    p.SetXYZ(0,0,0);
-    e.SetXYZ(0,0,0);
-    es.SetXYZ(0,0,0);
-    P.SetXYZ(0,0,0);
+    p=zero;
+    e=zero;
+    es=zero;
+    P=zero;
+    mA2=mA1=mA0=0;
+    e0[0]=zero;
+    e0[1]=zero;
    
     int ne=0;//number of unsorted electrons in this event 0.
     for (int j=0;j<npart;j++){
@@ -122,11 +125,11 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
     }
 
     //sort which electron is closer to the correct mass:
-    float mdiff=9999; 
+    float mdiff=10*bestGuessMass; 
     for (int j=0;j<2;j++){
       //float mtest=sqrt(mElec*mElec*2+2*p.Dot(e0[j]));//
       float mtest=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());//neglecting rest mass of electrons
-      //printf("found rest mass=%f\n",mtest);
+      printf("found rest mass=%f\n",mtest);
       if (abs(mtest-bestGuessMass)<mdiff){//if we're closer in this pair than the other pair...
 	mdiff=abs(mtest-bestGuessMass);
 	mA1=mA0;
