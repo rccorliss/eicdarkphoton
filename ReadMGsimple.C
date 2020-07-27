@@ -78,6 +78,7 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
   TTree *oTree=new TTree("oTree","parsed tree for specific event structure");
   TVector3 p,e,es,P;//positron,electron,spec. electron, Proton
   TVector3 e0[2];//unsorted electrons;
+  float m[2];//unsorted candidate masses.
   float mA0,mA1,mA2;//inv. mass of three candidates (two good ones first, then same-charge one last)
   float weight_scaled; //scaled for the number of files we combined.  still in ub units.
   int ne=0;//
@@ -125,22 +126,21 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
     }
 
     //sort which electron is closer to the correct mass:
-    float mdiff=10*bestGuessMass; 
     for (int j=0;j<2;j++){
-      //float mtest=sqrt(mElec*mElec*2+2*p.Dot(e0[j]));//
-      float mtest=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());//neglecting rest mass of electrons
-      printf("found rest mass=%f\n",mtest);
-      if (abs(mtest-bestGuessMass)<mdiff){//if we're closer in this pair than the other pair...
-	mdiff=abs(mtest-bestGuessMass);
-	mA1=mA0;
-	mA0=mtest;
-	e=e0[j];
-	es=e0[(j+1)%2];
-      } else {
-	mA1=mtest;
-	es=e0[j];
-      }
+      m[j]=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());
     }
+    if (abs(m[0]-bestGuessMass)<abs(m[1]-bestGuessMass)){
+      mA0=m[0];
+      mA1=m[1];
+      e=e0[0];
+      es=e0[1];
+    } else {
+      mA0=m[1];
+      mA1=m[0];
+      e=e0[1];
+      es=e0[0];
+    }
+    
     weight_scaled=weight_ub*weightscale;
     mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
     oTree->Fill();

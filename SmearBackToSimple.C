@@ -9,6 +9,8 @@ void FixMomentumBug(const char* infile, const char* outfile);
 void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt"){
 
   //const float mA=500;//MeV;
+
+  
   const float mElec=0.511;//MeV;
   const float elBeamEnergy=20;//GeV
   const float pBeamEnergy=250;//GeV
@@ -91,9 +93,10 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 
   TFile *ofile=TFile::Open(outputname.Data(),"RECREATE");
   TTree *oTree=new TTree("oTree","parsed tree for specific event structure");
-  TVector3 p,e,es,P;//positron,electron,spec. electron, Proton
+  TVector3 p,e,es,P;//positron,electron,spec. electron, Proton vectors, in mev
   TVector3 e0[2];//unsorted electrons;
   float mA0,mA1,mA2;//inv. mass of three candidates (two good ones first, then same-charge one last)
+  float m[2];//unsorted candidate masses.
   float weight_scaled; //scaled for the number of files we combined.  still in ub units.
   int ne=0;//
 
@@ -134,7 +137,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 	}
          // Let's just select charged pions for this example:
 	int pid = particle->Id().Code();
-	 TVector3 mom(particle->GetPx(),particle->GetPy(),particle->GetPz());
+	 TVector3 mom(particle->GetPx()*1e3,particle->GetPy()*1e3,particle->GetPz()*1e3);
 	 if (pid==2212) P=mom; //proton;
 	 if (pid==-11) p=mom; //only one positron per event in this assumption;
 	 if (pid==11){
@@ -145,24 +148,25 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
       }
 
     //sort electrons by which electron+positron pair is closer to the correct mass:
-      float mdiff=9999;
       mA0=mA1=mA2=0;
- 
-      for (int j=0;j<2;j++){
-	//float mtest=sqrt(mElec*mElec*2+2*p.Dot(e0[j]));//
-	float mtest=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());//neglecting rest mass of electrons
-	if (i<5) printf("found rest mass=%f\n",mtest);
-	if (abs(mtest-bestGuessMass)<mdiff){//if we're closer in this pair than the other pair...
-	  mdiff=abs(mtest-bestGuessMass);
-	  mA1=mA0;
-	  mA0=mtest;
-	  e=e0[j];
-	  es=e0[(j+1)%2];
-	} else {
-	  mA1=mtest;
-	  es=e0[j];
-	}
-      }
+
+   //sort which electron is closer to the correct mass:
+    for (int j=0;j<2;j++){
+      m[j]=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());
+    }
+    if (abs(m[0]-bestGuessMass)<abs(m[1]-bestGuessMass)){
+      mA0=m[0];
+      mA1=m[1];
+      e=e0[0];
+      es=e0[1];
+    } else {
+      mA0=m[1];
+      mA1=m[0];
+      e=e0[1];
+      es=e0[0];
+    }
+      
+  
       mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
       oTree->Fill();
 
@@ -235,7 +239,7 @@ float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh** eve){
     for (int k=0;k<2;k++){
       if (guesswins[k]>winthreshold) {
 	printf("after %d events, found a winning mass guess: m=%2.2f\n",i,massguess[k]);
-	return massguess[k];
+	return massguess[k]*1e3;//return the guess mass, converted back into MeV
       }
     }
   }
