@@ -7,7 +7,8 @@ void FixMomentumBug(const char* infile, const char* outfile);
 
 
 void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt"){
-
+  int nDebugEve=50;//how many events to be verbose on.
+  int nDebugStop=50;//where to force-exit the program.
   //const float mA=500;//MeV;
 
   
@@ -21,58 +22,60 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 
      
   // Load the shared library, if not done automaticlly:
-   gSystem->Load("libeicsmear.so" );
-   erhic::DisKinematics::BoundaryWarning=false; //turn off the DIS check.  Not sure why I run afoul of it, but it yells an awful lot.
+  gSystem->Load("libeicsmear.so" );
+  erhic::DisKinematics::BoundaryWarning=false; //turn off the DIS check.  Not sure why I run afoul of it, but it yells an awful lot.
 
-   //convert the djangoh text file into a djangoh tree:
-   BuildTree(filename, ".", -1);
+  //convert the djangoh text file into a djangoh tree:
+  BuildTree(filename, ".", -1);
    
 
   TString djTreeFilename=filename;
   djTreeFilename.ReplaceAll("djangoh.txt","djangoh.root");
 
 
-   TString fixedTreeFilename=djTreeFilename;
-   //fixedTreeFilename.ReplaceAll("djangoh.root","fixed.djangoh.root");
-   //let's see if I got Ivica's fix right this time: FixMomentumBug(djTreeFilename.Data(),fixedTreeFilename.Data());
+  TString fixedTreeFilename=djTreeFilename;
+  //fixedTreeFilename.ReplaceAll("djangoh.root","fixed.djangoh.root");
+  //let's see if I got Ivica's fix right this time: FixMomentumBug(djTreeFilename.Data(),fixedTreeFilename.Data());
 
   TChain unsmeared("EICTree");
   unsmeared.Add(fixedTreeFilename.Data());
-   erhic::EventDjangoh* unEve(NULL);
-   unsmeared.SetBranchAddress("event", &unEve ); // Note &event, not event.
+  erhic::EventDjangoh* unEve(NULL);
+  unsmeared.SetBranchAddress("event", &unEve ); // Note &event, not event.
   
   //gROOT->ProcessLine(".L smearHandBook.cxx");
-   TString outputname=djTreeFilename;
-   outputname.ReplaceAll("djangoh.root","smeared.root");
-   SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
-   //SmearTree(BuildPerfectDetector(),fixedTreeFilename,outputname.Data());
-   
+  TString outputname=djTreeFilename;
+  outputname.ReplaceAll("djangoh.root","smeared.root");
+  TString perfectname=djTreeFilename;
+  perfectname.ReplaceAll("djangoh.root","perfect.root");
+  //SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
+  SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
+  outputname=perfectname; 
 
-   float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
+  float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
 
-     printf("Building smeared oTree output from %s, which has a guessed mass of %fMeV\n",filename,bestGuessMass);
+  printf("Building smeared oTree output from %s, which has a guessed mass of %fMeV\n",filename,bestGuessMass);
 
    
-   // The TTrees are named EICTree. -- nope, smeared trees are called 'Smeared'
-   // Create a TChain for trees with this name.
-   TChain tree("Smeared");
-   tree.Add(outputname.Data()); // Wild cards are allowed e.g. tree.Add("*.root" );
+  // The TTrees are named EICTree. -- nope, smeared trees are called 'Smeared'
+  // Create a TChain for trees with this name.
+  TChain tree("Smeared");
+  tree.Add(outputname.Data()); // Wild cards are allowed e.g. tree.Add("*.root" );
    
-   // Create an object to store the current event from the tree.
-   // This is how we access the values in the tree.
-   // If you want to use generator-specific values, then
-   // the event type should match the type in the TTree. Valid types are
-   // EventPythia, EventPepsi, EventRapgap, EventDjangoh, EventMilou.
-   // If you only need shared quantities like x, Q2 and the particle list
-   // you can use EventBase and the macro will be general for any Monte Carlo.
-   Smear::Event* event(NULL);// = new EventPythia;
-// EventBase* event(NULL);
+  // Create an object to store the current event from the tree.
+  // This is how we access the values in the tree.
+  // If you want to use generator-specific values, then
+  // the event type should match the type in the TTree. Valid types are
+  // EventPythia, EventPepsi, EventRapgap, EventDjangoh, EventMilou.
+  // If you only need shared quantities like x, Q2 and the particle list
+  // you can use EventBase and the macro will be general for any Monte Carlo.
+  Smear::Event* event(NULL);// = new EventPythia;
+  // EventBase* event(NULL);
    
-   // Now associate the contents of the branch with the buffer.
-   // The events are stored in a branch named event:
-   tree.SetBranchAddress("eventS", &event ); // Note &event, not event.
+  // Now associate the contents of the branch with the buffer.
+  // The events are stored in a branch named event:
+  tree.SetBranchAddress("eventS", &event ); // Note &event, not event.
    
-   int nEvents=tree.GetEntries();
+  int nEvents=tree.GetEntries();
 
   const int MaxPart=10;
   Int_t npart;
@@ -112,58 +115,63 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 
 
   // Loop over events:
-   for(int i=0; i<nEvents; i++){
-     //if (i>100) break; //debug.
-      // Read the next entry from the tree.
-      tree.GetEntry(i);
-      unsmeared.GetEntry(i);//follow along with our unsmeared tree.  If we didn't need it separately, we could have made it a friend.
+  for(int i=0; i<nEvents; i++){
+    if (nDebugStop>0 &&i>nDebugStop) break; //debug.
+    // Read the next entry from the tree.
+    tree.GetEntry(i);
+    unsmeared.GetEntry(i);//follow along with our unsmeared tree.  If we didn't need it separately, we could have made it a friend.
       
-      int npart = event->GetNTracks();
-      weight_scaled=unEve->sigTot*1e-9;//convert fb back into ub for oTree convention
+    int npart = event->GetNTracks();
+    weight_scaled=unEve->sigTot*1e-9;//convert fb back into ub for oTree convention
 
-      //zero out our momenta:
-      e0[0]=zero;
-      e0[1]=zero;
-      p=zero;
-      P=zero;
-      e=zero;
-      es=zero;
+    //zero out our momenta:
+    e0[0]=zero;
+    e0[1]=zero;
+    p=zero;
+    P=zero;
+    e=zero;
+    es=zero;
 
       
-      //identify and sort the particles 
-      int ne=0;//no electrons found to start
-      for(int j=0; j < npart; ++j ) {
-	Smear::ParticleMCS* particle = event->GetTrack(j);
-	if (particle==NULL) {
-	  	 if (i<5) printf("found particle in ev=%d, j=%d/%d, (NULL POINTER)\n",i,j,npart);
-		 continue;
-	}
-         // Let's just select charged pions for this example:
-	int pid = particle->Id().Code();
-	 TVector3 mom(particle->GetPx()*1e3,particle->GetPy()*1e3,particle->GetPz()*1e3);
-	 //note that we have converted back to MeV from GeV.
-	 if (pid==2212) P=mom; //proton;
-	 if (pid==-11) p=mom; //only one positron per event in this assumption;
-	 if (pid==11){
-	   e0[ne]=mom;
-	   ne++;
-	 }
-	 if (i<5) printf("found particle in ev=%d, j=%d/%d, pid=%d, p=(%f,%f,%f)\n",i,j,npart,pid,mom.X(),mom.Y(),mom.Z());
+    //identify and sort the particles 
+    int ne=0;//no electrons found to start
+    for(int j=0; j < npart; j++ ) {
+      Smear::ParticleMCS* particle = event->GetTrack(j);
+      if (particle==NULL) {
+	if (i<nDebugEve) printf("found particle in ev=%d, j=%d/%d, (NULL POINTER)\n",i,j,npart);
+	continue;
       }
+      // Let's just select charged pions for this example:
+      int pid = particle->Id().Code();
+      TVector3 mom(particle->GetPx()*1e3,particle->GetPy()*1e3,particle->GetPz()*1e3);
+      //note that we have converted back to MeV from GeV.
+      if (pid==2212) P=mom; //proton;
+      if (pid==-11) p=mom; //only one positron per event in this assumption;
+      if (pid==11){
+	e0[ne]=mom;
+	ne++;
+      }
+      if (i<DebugEve) printf("found particle in ev=%d, j=%d/%d, pid=%d, p=(%f,%f,%f)\n",i,j,npart,pid,mom.X(),mom.Y(),mom.Z());
+    }
+    if (i<DebugEve) printf("total electrons=%d\n",ne);
 
     //sort electrons by which electron+positron pair is closer to the correct mass:
-      mA0=mA1=mA2=0;
+    mA0=mA1=mA2=0;
 
-   //sort which electron is closer to the correct mass:
+    //sort which electron is closer to the correct mass:
     for (int j=0;j<2;j++){
       m[j]=sqrt(-2*p.Dot(e0[j])+2*p.Mag()*e0[j].Mag());
     }
+    if (i<DebugEve) printf("mass guesses:  %f and %f\n",m[0],m[1]);
+
     if(ne==1 || (abs(m[0]-bestGuessMass)<abs(m[1]-bestGuessMass))){
+      if (i<DebugEve) printf("first guess is better.\n");
       mA0=m[0];
       mA1=m[1];
       e=e0[0];
       es=e0[1];
     } else {
+      if (i<DebugEve) printf("second guess is better.\n");
       mA0=m[1];
       mA1=m[0];
       e=e0[1];
@@ -171,15 +179,15 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
     }
       
   
-      mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
-      oTree->Fill();
+    mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
+    oTree->Fill();
 
-   }
+  }
 
   oTree->Write();
   ofile->Close();
 
-return;
+  return;
 }
 
 
