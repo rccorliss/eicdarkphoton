@@ -170,7 +170,7 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
 
     for (int j=0;j<npart;j++){
       // format:   fprintf(djangoh,"I, 1=stable, CHEP PID, parent I, 0=stable, 0=stable, px, py, pz, E, m, x0,y0,z0\n");
-      fprintf(djangoh,"%d\t1\t%d\t0\t0\t%f\t%f\t%f\t%f\t%f\t0\t0\t0\n",j+1,pid[j],px[j]/1e3,py[j]/1e3,pz[j]/1e3,ene[j]/1e3,pid[j]==2212?pBeamMass:(mElec/1e3));
+      fprintf(djangoh,"%d\t1\t%d\t0\t0\t0\t%f\t%f\t%f\t%f\t%f\t0\t0\t0\n",j+1,pid[j],px[j]/1e3,py[j]/1e3,pz[j]/1e3,ene[j]/1e3,pid[j]==2212?pBeamMass:(mElec/1e3));
     }
   fprintf(djangoh,"=============== Event finished ===============\n");
 
