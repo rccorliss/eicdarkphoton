@@ -8,7 +8,7 @@ void FixMomentumBug(const char* infile, const char* outfile);
 
 void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt"){
   int nDebugEve=50;//how many events to be verbose on.
-  int nDebugStop=50;//where to force-exit the program.
+  int nDebugStop=-1;//where to force-exit the program.
   //const float mA=500;//MeV;
 
   
@@ -45,11 +45,11 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   //gROOT->ProcessLine(".L smearHandBook.cxx");
   TString outputname=djTreeFilename;
   outputname.ReplaceAll("djangoh.root","smeared.root");
-  TString perfectname=djTreeFilename;
-  perfectname.ReplaceAll("djangoh.root","perfect.root");
-  //SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
-  SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
-  outputname=perfectname; 
+  SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
+  //TString perfectname=djTreeFilename;
+  //perfectname.ReplaceAll("djangoh.root","perfect.root");
+  //SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
+  //outputname=perfectname; 
 
   float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
 
@@ -76,20 +76,6 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   tree.SetBranchAddress("eventS", &event ); // Note &event, not event.
    
   int nEvents=tree.GetEntries();
-
-  const int MaxPart=10;
-  Int_t npart;
-  Float_t weight_ub; //weight in ub.
-  Float_t px[MaxPart];
-  Float_t py[MaxPart];
-  Float_t pz[MaxPart];
-  Float_t ene[MaxPart];
-  Int_t pid[MaxPart];
-  Char_t pidc[MaxPart];//single character to make it easier to recognize a particle. 
-  Int_t charge[MaxPart];//particle charge +1,-1, or zero in some cases.
-
-
-
   
   //open the file we'll be writing the parsed tree to:
   outputname.ReplaceAll("smeared.root","smeared.otree.root");
@@ -98,16 +84,20 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   TTree *oTree=new TTree("oTree","parsed tree for specific event structure");
   TVector3 p,e,es,P;//positron,electron,spec. electron, Proton vectors, in mev
   TVector3 e0[2];//unsorted electrons;
+  bool e0p[2];//pid for the unsorted electrons
+
   TVector3 zero(0,0,0);
   float mA0,mA1,mA2;//inv. mass of three candidates (two good ones first, then same-charge one last)
   float m[2];//unsorted candidate masses.
   float weight_scaled; //scaled for the number of files we combined.  still in ub units.
   int ne=0;//
-
+  bool ppid,Ppid,epid,espid;//whetherthis paarticle has pid assigned.
   oTree->Branch("p",&p);
   oTree->Branch("P",&P);
   oTree->Branch("e",&e);
   oTree->Branch("es",&es);
+  oTree->Branch("epid",&epid);
+  oTree->Branch("espid",&espid);
   oTree->Branch("mA0",&mA0);
   oTree->Branch("mA1",&mA1);
   oTree->Branch("mA2",&mA2);
@@ -132,6 +122,8 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
     e=zero;
     es=zero;
 
+    ppid=Ppid=epid=espid=true;
+    e0p[0]=e0p[1]=false;
       
     //identify and sort the particles 
     int ne=0;//no electrons found to start
@@ -141,7 +133,6 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 	if (i<nDebugEve) printf("found particle in ev=%d, j=%d/%d, (NULL POINTER)\n",i,j,npart);
 	continue;
       }
-      // Let's just select charged pions for this example:
       int pid = particle->Id().Code();
       TVector3 mom(particle->GetPx()*1e3,particle->GetPy()*1e3,particle->GetPz()*1e3);
       //note that we have converted back to MeV from GeV.
@@ -151,7 +142,12 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
 	e0[ne]=mom;
 	ne++;
       }
-      if (i<nDebugEve) printf("found particle in ev=%d, j=%d/%d, pid=%d, p=(%f,%f,%f)\n",i,j,npart,pid,mom.X(),mom.Y(),mom.Z());
+      if (pid==0){
+	e0[ne]=mom;
+	e0p[ne]=false;
+	ne++;
+      }
+	if (i<nDebugEve) printf("found particle in ev=%d, j=%d/%d, pid=%d, p=(%f,%f,%f)\n",i,j,npart,pid,mom.X(),mom.Y(),mom.Z());
     }
     if (i<nDebugEve) printf("total electrons=%d\n",ne);
 
@@ -170,19 +166,25 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
       mA1=m[1];
       e=e0[0];
       es=e0[1];
+      epid=e0p[0]
+      espid=e0p[1]
     } else {
       if (i<nDebugEve) printf("second guess is better.\n");
       mA0=m[1];
       mA1=m[0];
       e=e0[1];
       es=e0[0];
-    }
+      epid=e0p[1];
+      espid=e0p[0];
+     }
       
   
     mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
 
-    if (i<nDebugEve) printf("filling e=(%f,%f,%f) (mA0=%1.4f)\n",e.X(),e.Y(),e.Z(),mA0);
-    if (i<nDebugEve) printf("filling es=(%f,%f,%f) (mA1=%1.4f)\n",es.X(),es.Y(),es.Z(),mA1);
+    if (i<nDebugEve) {
+      printf("filling e=(%f,%f,%f) (mA0=%1.4f)\n",e.X(),e.Y(),e.Z(),mA0);
+      printf("filling es=(%f,%f,%f) (mA1=%1.4f)\n",es.X(),es.Y(),es.Z(),mA1);
+    }
 
     
     oTree->Fill();
