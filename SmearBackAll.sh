@@ -4,11 +4,12 @@
 
 dirname=${$1%/}
 echo dirname: .$dirname.
-filelist=`ls ./$dirname/*gamma*.djangoh.txt`
+filelist=`ls ./$dirname/*.djangoh.txt`
 
 
 for filename in $filelist
   do
-      root -b -q SmearBackToSimple.C\(\"$filename\"\)
+      echo running silently:  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\"\\\) 
+      root -b -q SmearBackToSimple.C\(\"$filename\"\) >/dev/null 2>&1
 done
 exit
