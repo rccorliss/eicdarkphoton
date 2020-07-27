@@ -166,8 +166,8 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
       mA1=m[1];
       e=e0[0];
       es=e0[1];
-      epid=e0p[0]
-      espid=e0p[1]
+      epid=e0p[0];
+      espid=e0p[1];
     } else {
       if (i<nDebugEve) printf("second guess is better.\n");
       mA0=m[1];
