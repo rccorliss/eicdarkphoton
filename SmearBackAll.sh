@@ -9,10 +9,14 @@ echo outdir: .$outdir.
 filelist=`ls $dirname/*.djangoh.txt`
 mkdir $outdir
 
+degrade=$3
+
+echo taking every .djangoh file in $dirname and processing it with degrade=$degrade into $outdir
+
 for filename in $filelist
 do
     outputname=`echo $filename | sed s@$dirname@$outdir@`
-    echo running with errors silenced!  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\",\\\"$outputname\\\"\\\) 
-    root -b -q SmearBackToSimple.C\(\"$filename\",\"$outputname\"\) 2>/dev/null
+    echo running with errors silenced!  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\",\\\"$outputname\\\",$degrade\\\) 
+    root -b -q SmearBackToSimple.C\(\"$filename\",\"$outputname\",$degrade\) 2>/dev/null
 done
 exit

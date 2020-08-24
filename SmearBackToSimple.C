@@ -6,7 +6,7 @@ float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh **eve);
 void FixMomentumBug(const char* infile, const char* outfile);
 
 
-void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt", const char* outputfilename="default"){
+void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt", const char* outputfilename="default", int degrade=0){
   int nDebugEve=50;//how many events to be verbose on.
   int nDebugStop=-1;//where to force-exit the program.
   //const float mA=500;//MeV;
@@ -49,7 +49,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   //gROOT->ProcessLine(".L smearHandBook.cxx");
   TString outputname=djTreeFilename;
   outputname.ReplaceAll("djangoh.root","smeared.root");
-  SmearTree(BuildHandBookDetector(0),fixedTreeFilename,outputname.Data());
+  SmearTree(BuildHandBookDetector(degrade),fixedTreeFilename,outputname.Data());
   //TString perfectname=djTreeFilename;
   //perfectname.ReplaceAll("djangoh.root","perfect.root");
   //SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
