@@ -13,6 +13,6 @@ for filename in $filelist
 do
     outputname=`echo $filename | sed s@$dirname@$outdir@`
     echo running with errors silenced!  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\",\\\"$outputname\\\"\\\) 
-    echo root -b -q SmearBackToSimple.C\(\"$filename\",\"$outputname\"\) 2>/dev/null
+    root -b -q SmearBackToSimple.C\(\"$filename\",\"$outputname\"\) 2>/dev/null
 done
 exit
