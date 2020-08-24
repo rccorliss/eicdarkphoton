@@ -6,7 +6,7 @@ float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh **eve);
 void FixMomentumBug(const char* infile, const char* outfile);
 
 
-void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt"){
+void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1deglab.djangoh.txt", const char* outputfilename="default"){
   int nDebugEve=50;//how many events to be verbose on.
   int nDebugStop=-1;//where to force-exit the program.
   //const float mA=500;//MeV;
@@ -29,7 +29,11 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   BuildTree(filename, ".", -1);
    
 
-  TString djTreeFilename=filename;
+  TString djTreeFilename=outputfilename;
+  if (djTreeFilename.EqualsTo("default")){
+    //if we're using the default output, base that on the filename instead of the outputname.
+    djTreeFilename=filename;
+  }
   djTreeFilename.ReplaceAll("djangoh.txt","djangoh.root");
 
 
@@ -45,11 +49,11 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   //gROOT->ProcessLine(".L smearHandBook.cxx");
   TString outputname=djTreeFilename;
   outputname.ReplaceAll("djangoh.root","smeared.root");
-  SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
+  //SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
   //TString perfectname=djTreeFilename;
-  //perfectname.ReplaceAll("djangoh.root","perfect.root");
-  //SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
-  //outputname=perfectname; 
+  perfectname.ReplaceAll("djangoh.root","perfect.root");
+  SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
+  outputname=perfectname; 
 
   float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
 
@@ -123,7 +127,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
     es=zero;
 
     ppid=Ppid=epid=espid=true;
-    e0p[0]=e0p[1]=false;
+    e0p[0]=e0p[1]=true;
       
     //identify and sort the particles 
     int ne=0;//no electrons found to start

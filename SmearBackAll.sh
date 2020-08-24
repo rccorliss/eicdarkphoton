@@ -4,12 +4,15 @@
 
 dirname=${$1%/}
 echo dirname: .$dirname.
+outdir=${$2%/}
+echo outdir: .$outdir.
 filelist=`ls ./$dirname/*.djangoh.txt`
-
+mkdir outdir
 
 for filename in $filelist
-  do
-      echo running with errors silenced!  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\"\\\) 
-      root -b -q SmearBackToSimple.C\(\"$filename\"\) 2>/dev/null
+do
+    outputname=`echo $filename | sed s|$dirname|$outdir|`
+    echo running with errors silenced!  root -b -q SmearBackToSimple.C\\\(\\\"$filename\\\",\\\"$outputname\\\"\\\) 
+    echo root -b -q SmearBackToSimple.C\(\"$filename\",\"$outputname\"\) 2>/dev/null
 done
 exit
