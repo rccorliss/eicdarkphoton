@@ -26,16 +26,13 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   erhic::DisKinematics::BoundaryWarning=false; //turn off the DIS check.  Not sure why I run afoul of it, but it yells an awful lot.
 
   //convert the djangoh text file into a djangoh tree:
-  BuildTree(filename, ".", -1);
+  printf("Assuming the djangoh.root tree has already been written.\n");
+  //BuildTree(filename, ".", -1); //already done.  But keep an eye on it
    
 
-  TString djTreeFilename=outputfilename;
-  if (djTreeFilename.EqualsTo("default")){
-    //if we're using the default output, base that on the filename instead of the outputname.
-    djTreeFilename=filename;
-  }
-  djTreeFilename.ReplaceAll("djangoh.txt","djangoh.root");
-
+  TString djTreeFilename=filename;
+   djTreeFilename.ReplaceAll("djangoh.txt","djangoh.root");
+  printf("loading djTree from %s\n",djTreeFilename.Data());
 
   TString fixedTreeFilename=djTreeFilename;
   //fixedTreeFilename.ReplaceAll("djangoh.root","fixed.djangoh.root");
@@ -47,8 +44,15 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   unsmeared.SetBranchAddress("event", &unEve ); // Note &event, not event.
   
   //gROOT->ProcessLine(".L smearHandBook.cxx");
-  TString outputname=djTreeFilename;
-  outputname.ReplaceAll("djangoh.root","smeared.root");
+  TString outputname=outputfilename;
+ if (outputname.EqualTo("default")){
+    //if we're using the default output, base that on the filename instead of the outputname.
+    printf("using default filename.  draw from input name.\n");
+    outputname=filename;
+  }
+
+  
+  outputname.ReplaceAll("djangoh.txt","smeared.root");
   SmearTree(BuildHandBookDetector(degrade),fixedTreeFilename,outputname.Data());
   //TString perfectname=djTreeFilename;
   //perfectname.ReplaceAll("djangoh.root","perfect.root");

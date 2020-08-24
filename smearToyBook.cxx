@@ -132,7 +132,7 @@ Smear::Detector BuildHandBookDetector(int barrelDegrade=0) {
   // eta = -1 -- +1
   // sigma_p/p ~ 0.05% p+0.5%
   Smear::Acceptance::Zone TrackBarrelZone(ThetaFromEta ( 1 ),ThetaFromEta ( -1 ));
-  const char* barrelMomRes=Form("sqrt( pow ( %f*P*P, 2) + pow ( %f*P, 2) )",0.0005*(1+barrelDegrade),0.005*(1+barrelDegrade))
+  const char* barrelMomRes=Form("sqrt( pow ( %f*P*P, 2) + pow ( %f*P, 2) )",0.0005*(1+barrelDegrade),0.005*(1+barrelDegrade));
 
   Smear::Device TrackBarrelP(Smear::kP, barrelMomRes);
   TrackBarrelP.Accept.AddZone(TrackBarrelZone);
