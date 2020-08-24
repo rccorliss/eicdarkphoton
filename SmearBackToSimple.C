@@ -1,6 +1,6 @@
 
 
-#include "smearHandBook.cxx"
+#include "smearToyBook.cxx"
 #include "PerfectDetector.cxx"
 float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh **eve);
 void FixMomentumBug(const char* infile, const char* outfile);
@@ -49,11 +49,11 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
   //gROOT->ProcessLine(".L smearHandBook.cxx");
   TString outputname=djTreeFilename;
   outputname.ReplaceAll("djangoh.root","smeared.root");
-  //SmearTree(BuildHandBookDetector(),fixedTreeFilename,outputname.Data());
+  SmearTree(BuildHandBookDetector(0),fixedTreeFilename,outputname.Data());
   //TString perfectname=djTreeFilename;
-  perfectname.ReplaceAll("djangoh.root","perfect.root");
-  SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
-  outputname=perfectname; 
+  //perfectname.ReplaceAll("djangoh.root","perfect.root");
+  //SmearTree(BuildPerfectDetector(),fixedTreeFilename,perfectname.Data());
+  //outputname=perfectname; 
 
   float bestGuessMass=GuessMassFromUnsmeared(&unsmeared,&unEve);
 
