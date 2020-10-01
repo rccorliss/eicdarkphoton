@@ -50,9 +50,9 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
     printf("using default filename.  draw from input name.\n");
     outputname=filename;
   }
-
-  
   outputname.ReplaceAll("djangoh.txt","smeared.root");
+
+  printf("degrading by a factor of %d\n");
   SmearTree(BuildHandBookDetector(degrade),fixedTreeFilename,outputname.Data());
   //TString perfectname=djTreeFilename;
   //perfectname.ReplaceAll("djangoh.root","perfect.root");
@@ -121,6 +121,7 @@ void SmearBackToSimple(const char* filename="sum100_eic20x250_ep_epee_m5GeV_th_1
       
     int npart = event->GetNTracks();
     weight_scaled=unEve->sigTot*1e-9;//convert fb back into ub for oTree convention
+    if (npart>4) printf("Unusual npart=%d in event %d\n",npart,i);
 
     //zero out our momenta:
     e0[0]=zero;
@@ -230,6 +231,7 @@ float GuessMassFromUnsmeared(TTree *t, erhic::EventDjangoh** eve){
 
     //identify our particles:
     int npart=(*eve)->GetNTracks();
+    if (npart>4) printf("Unusual npart=%d in event %d\n",npart,i);
     int ne=0;//number of unsorted electrons in this event 0.
     for (int j=0;j<npart;j++){
       Particle* part = (*eve)->GetTrack(j);

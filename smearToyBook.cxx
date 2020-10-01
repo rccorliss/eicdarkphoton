@@ -45,7 +45,7 @@ Smear::Detector BuildHandBookDetector(int barrelDegrade=0) {
 
   // Create the detector object to hold all devices
   Smear::Detector det;
-
+  printf("in Ross's special stuff.  want me to prove it?\n");
   // The framework provides implementations of three kinematic calculation methods
   // from smeared values
   // NM - "Null method" uses the scattered lepton.
@@ -86,7 +86,7 @@ Smear::Detector BuildHandBookDetector(int barrelDegrade=0) {
   // ----------------------------------------
   // total coverage of the handbook for tracker and hcal is -3.5 < eta < 3.5
   Smear::Acceptance::Zone AngleZoneHadronic(ThetaFromEta ( 3.5 ),ThetaFromEta ( -3.5 ));
-  Smear::Device SmearThetaHadronic(Smear::kTheta, "0.001");
+  Smear::Device SmearThetaHadronic(Smear::kTheta, "0.001");//was 0.001
   SmearThetaHadronic.Accept.AddZone(AngleZoneHadronic);
   SmearThetaHadronic.Accept.SetGenre(Smear::kHadronic);    
   det.AddDevice(SmearThetaHadronic);
@@ -98,7 +98,7 @@ Smear::Detector BuildHandBookDetector(int barrelDegrade=0) {
   
   // emcal stretches to -4.5 < eta < 4.5
   Smear::Acceptance::Zone AngleZoneEmcal(ThetaFromEta ( 4.5 ),ThetaFromEta ( -4.5 ));
-  Smear::Device SmearThetaEmcal(Smear::kTheta, "0.001");
+  Smear::Device SmearThetaEmcal(Smear::kTheta, "0.1");//was 0.001
   SmearThetaEmcal.Accept.AddZone(AngleZoneEmcal);
   SmearThetaEmcal.Accept.SetGenre(Smear::kElectromagnetic);    
   det.AddDevice(SmearThetaEmcal);
@@ -131,9 +131,10 @@ Smear::Detector BuildHandBookDetector(int barrelDegrade=0) {
 
   // eta = -1 -- +1
   // sigma_p/p ~ 0.05% p+0.5%
+  printf("barrelDegrade=%d, producing resolution of %f\n",barrelDegrade,0.0005*(1.0+barrelDegrade));
   Smear::Acceptance::Zone TrackBarrelZone(ThetaFromEta ( 1 ),ThetaFromEta ( -1 ));
-  const char* barrelMomRes=Form("sqrt( pow ( %f*P*P, 2) + pow ( %f*P, 2) )",0.0005*(1+barrelDegrade),0.005*(1+barrelDegrade));
-
+  const char barrelMomRes[200]=Form("sqrt( pow ( %f*P*P, 2) + pow ( %f*P, 2) )",0.0005*(1.0+barrelDegrade),0.005*(1.0+barrelDegrade));
+  printf("barrel string: %s\n",barrelMomRes);
   Smear::Device TrackBarrelP(Smear::kP, barrelMomRes);
   TrackBarrelP.Accept.AddZone(TrackBarrelZone);
   TrackBarrelP.Accept.SetCharge(Smear::kCharged);
