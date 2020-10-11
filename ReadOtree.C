@@ -64,7 +64,14 @@ void ReadOtree(char *treefile){
   d.mass=A4->M();
   d.tree->Draw("es.Z()");
 
-  vector<double> vq2,vQ2,vxs,vw,vth;
+
+  //outputs:
+  vector<double> ve,vq2,vQ2,vxs,vw,vth;
+  TH1F *hXsComparison=new TH1F("hXsComparison","total weight of events vs xs from ep scatter;xs;weight",1e5,1e-12,1e12);
+  TH1F *hXsLogComparison=new TH1F("hXsLogComparison","total weight of events vs Log10(xs) from ep scatter;log10(xs);weight/barn-width",100,-12,12);
+
+
+  
 
   for (int i=0;i<d.n;i++){
     d.tree->GetEntry(i);
@@ -84,8 +91,8 @@ void ReadOtree(char *treefile){
     //now these are in the fixed target frame.
     //the scattering angle is the angle between the incoming and outgoing electron:
     double theta=es4f->Angle(e14f->Vect());
-    double sinth=sin(theta/2);
-    double costh=cos(theta/2);
+    double sinth=TMath::Sin(theta/2.0);
+    double costh=TMath::Cos(theta/2.0);
 
     //the incoming energy is just the E term off the incoming electron:
     double energy=e14f->E();
@@ -94,18 +101,27 @@ void ReadOtree(char *treefile){
     double eprime=energy/(1+2*energy/P4f->M()*sinth*sinth);
     double q2=-4*energy*eprime*sinth*sinth;
 
-    double alpha=1/137;
+    double alpha=1.0/137.0;
 
+
+    //double xs_0=alpha
     double xs=alpha*alpha*costh*costh/(4*energy*energy*pow(sinth,4));
     xs*=eprime/energy;
-    xs*=(1-q2/(2*P4f->M()*P4f->M())*(sinth*sinth)/(costh*costh));
-
+    xs*=1 - q2/(2*P4f->M()*P4f->M())*(sinth*sinth)/(costh*costh);
+    //printf("cross section: xs=%E\n",xs);
+    ve.push_back(energy);
     vq2.push_back(-q2);
     vQ2.push_back(Q2);
     vxs.push_back(xs);
     vw.push_back(w);
     vth.push_back(theta);
 
+    hXsComparison->Fill(xs,w);
+
+    int bin=hXsLogComparison->FindBin(log10(xs));
+    double width=pow(10,hXsLogComparison->GetBinLowEdge(bin+1))-pow(10,hXsLogComparison->GetBinLowEdge(bin));
+    printf("bin width=%E, w/width=%E\n",width,w/width);
+    hXsLogComparison->Fill(log10(xs),w/width);
     
     //P04f->Print();
     //boostToFixed.Print();
@@ -113,9 +129,64 @@ void ReadOtree(char *treefile){
 
     
   }
+
+  TCanvas *c;
+  int nc=0;//number of canvases
   TGraph *g;
-  g=new TGraph(vq2.size(),&(vq2[0]),&(vQ2[0]));
-  g->SetTitle("Q^2 in fixed target (assuming ISR A') vs Q^2 from proton vectors;Q^2 from EE' (GeV^2);Q^2 from proton (GeV^2)");
-  g->Draw("A*");
+  TGraph2D *g2;
+  if (0){ //plot the Q^2 comparison
+    g=new TGraph(vq2.size(),&(vq2[0]),&(vQ2[0]));
+    g->SetTitle("Q^2 in fixed target (assuming ISR A') vs Q^2 from proton vectors;Q^2 from EE' (GeV^2);Q^2 from proton (GeV^2)");
+    g->Draw("A*");
+  }
+  if (0){ //plot calc'd xs vs theta, compare that to the 
+    c=new TCanvas(Form("c%d",nc),"canvas",800,800);
+    nc++;
+
+    c->Divide(2,2);
+    c->cd(1)->SetLogx();
+    c->cd(1)->SetLogy();
+    c->cd(1)->SetLogz();
+    g=new TGraph(vq2.size(),&(vth[0]),&(vxs[0]));
+    g->SetTitle("cross section vs theta (fixed target frame, using ISR assumption);theta (rad);xs arb*barns");
+    g->Draw("A*");
+    c->cd(2)->SetLogx();
+    c->cd(2)->SetLogy();
+    c->cd(2)->SetLogz();
+    g=new TGraph(vq2.size(),&(vth[0]),&(ve[0]));
+    g->SetTitle("energy vs theta (fixed target frame, using ISR assumption);theta (rad);electron energy (GeV)");
+    g->Draw("A*");
+    c->cd(3)->SetLogx();
+    c->cd(3)->SetLogy();
+    c->cd(3)->SetLogz();    g2=new TGraph2D(vq2.size(),&(ve[0]),&(vth[0]),&(vxs[0]));
+    g2->SetTitle("cross section vs electron energy and scattering angle (fixed target frame);electron E (GeV);theta (rad); xs(arb*barns)");
+    g2->Draw("P");
+    c->cd(4)->SetLogx();
+    c->cd(4)->SetLogy();
+    c->cd(4)->SetLogz();
+    g=new TGraph(vq2.size(),&(vw[0]),&(vxs[0]));
+    g->SetTitle("cross section vs mg weight; mg weight (ub);xs arb*barns");
+    g->Draw("A*");
+  }
+
+  if (1){ //compare calc'd theta to the madgraph weight. 
+    c=new TCanvas(Form("c%d",nc),"canvas",1200,400);
+    nc++;
+
+    c->Divide(3,1);
+     c->cd(1)->SetLogx();
+    c->cd(1)->SetLogy();
+    c->cd(1)->SetLogz();
+    g=new TGraph(vq2.size(),&(vw[0]),&(vxs[0]));
+    g->SetTitle("cross section vs mg weight; mg weight (ub);xs arb*barns");
+    g->Draw("A*");
+    c->cd(2)->SetLogy();
+    hXsLogComparison->Draw();
+    c->cd(3)->SetLogx();
+    c->cd(3)->SetLogy();
+    hXsComparison->Draw("hist");
+
+  }
+  
   return;
 }
