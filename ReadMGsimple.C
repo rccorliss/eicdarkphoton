@@ -83,6 +83,9 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
   float weight_scaled; //scaled for the number of files we combined.  still in ub units.
   int ne=0;//
 
+  TLorentzVector A4,p4,e4,e04,es4,P04,P4; //lorentz vectors for the A', positron, electron, intiial and final spectator electron, initial and final spectator proton.
+  float Q2;
+  
   oTree->Branch("p",&p);
   oTree->Branch("P",&P);
   oTree->Branch("e",&e);
@@ -92,6 +95,14 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
   oTree->Branch("mA2",&mA2);
   oTree->Branch("w",&weight_scaled); //still in ub!
 
+  oTree->Branch("A4",&A4);
+  oTree->Branch("p4",&p4);
+  oTree->Branch("e4",&e4);
+  oTree->Branch("e04",&e04);
+  oTree->Branch("es4",&es4);
+  oTree->Branch("P04",&P04);
+  oTree->Branch("P4",&P4);
+  oTree->Branch("Q2",&Q2);
 
 
   //now that we have all the branches we need, prime the djangoh output with the proper header:
@@ -105,6 +116,11 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
 
 
   TVector3 zero(0,0,0);
+
+  //initial beam states don't depend on event:
+  P04.SetXYZM(0,0,-pBeamEnergy,pBeamMass);//lorentz vectors in GeV...
+  e04.SetXYZM(0,0,elBeamEnergy,0.511*1e-3);//electron incoming 4vec in GeV
+  
   for (int i=0;i<neve;i++){
     mTree->GetEntry(i);
     p=zero;
@@ -143,6 +159,16 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
     
     weight_scaled=weight_ub*weightscale;
     mA2=sqrt(-2*e.Dot(es)+2*e.Mag()*es.Mag());
+    
+    //now that everything's sorted, define our remaining beam vectors:
+    e4.SetXYZM(e.X()*1e-3,e.Y()*1e-3,e.Z()*1e-3,0.511*1e-3);
+    es4.SetXYZM(es.X()*1e-3,es.Y()*1e-3,es.Z()*1e-3,0.511*1e-3);
+    p4.SetXYZM(p.X()*1e-3,p.Y()*1e-3,p.Z()*1e-3,0.511*1e-3);
+    P4.SetXYZM(P.X()*1e-3,P.Y()*1e-3,P.Z()*1e-3,938*1e-3);
+    A4=e4+p4;
+    TLorentzVector qlorentz=P4-P04; //momentum transfer fourvec
+    Q2=-1*qlorentz.Mag2();
+    
     oTree->Fill();
 
     //now that we have all the variables sorted, calc djangoh variabels as best we can, and print to the djangoh file:
