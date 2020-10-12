@@ -32,7 +32,7 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
     std::sscanf(filename+startat,"sum%d_%*s",&nruns);
   }
   float weightscale=1/(1.0*nruns);
-  
+  printf("reweighting assuming %d files, weightscale=%f\n",nruns,weightscale);
   
   TFile *file=TFile::Open(filename,"READ");
   TTree* mTree=(TTree*)(file->Get("madTree"));
