@@ -106,14 +106,15 @@ void ReadOtree(char *treefile){
   
   d.tree->GetEntry(0);
   d.mass=A4->M();
+  float wscale=15.0/d.n; //temporary to check the scale per discussion with Jan
   //d.tree->Draw("es.Z()");
 
 
   //outputs:
-  vector<double> ve,vq2,vq2alt,vq2best,vq2check,vq2checkISR,vq2checkFSR,vQ2,vxs,vw,vth;
+  vector<double> ve,vq2,vq2alt,vq2best,vq2check,vq2checkISR,vq2checkFSR,vQ2,vxs,vw,vth,vcorr;
   TH1F *hXsComparison=new TH1F("hXsComparison","total weight of events vs xs from ep scatter;xs;weight",1e5,1e-12,1e12);
   TH1F *hXsLogComparison=new TH1F("hXsLogComparison","total weight of events vs Log10(xs) from ep scatter;log10(xs);weight/barn-width",100,-12,12);
-  TH1F *hAngle=new TH1F("hANgle","total weight of events vs electron theta from ep scatter;theta (rad);weight",100,0,1e-5);
+  TH1F *hAngle=new TH1F("hANgle","total weight of events vs electron theta from ep scatter;theta (rad);weight",50,0,1e-5);
 
   
 
@@ -186,6 +187,12 @@ void ReadOtree(char *treefile){
     double xs=alpha*alpha*costh*costh/(4*energy*energy*pow(sinth,4));
     xs*=eprime/energy;
     xs*=1 - q2/(2*P4f->M2())*(sinth*sinth)/(costh*costh);
+
+    float tau=Tau(Q2,P4f->M2());
+    
+    double ffcorrection=GeGmFF(tau,theta,Q2)/PointFF(tau,theta);
+
+    
     //printf("cross section: xs=%E\n",xs);
     ve.push_back(energy);
     vq2.push_back(-q2);
@@ -196,16 +203,17 @@ void ReadOtree(char *treefile){
     vq2best.push_back(-bestq2);
     vQ2.push_back(Q2);
     vxs.push_back(xs);
-    vw.push_back(w);
+    vw.push_back(w*wscale);
     vth.push_back(theta);
+    vcorr.push_back(ffcorrection);
 
-    hXsComparison->Fill(xs,w);
-    hAngle->Fill(theta,w);
+    hXsComparison->Fill(xs,w*wscale);
+    hAngle->Fill(theta,w*wscale);
 
     int bin=hXsLogComparison->FindBin(log10(xs));
     double width=pow(10,hXsLogComparison->GetBinLowEdge(bin+1))-pow(10,hXsLogComparison->GetBinLowEdge(bin));
     //printf("bin width=%E, w/width=%E\n",width,w/width);
-    hXsLogComparison->Fill(log10(xs),w/width);
+    hXsLogComparison->Fill(log10(xs),w*wscale/width);
     
     //P04f->Print();
     //boostToFixed.Print();
@@ -383,6 +391,25 @@ void ReadOtree(char *treefile){
 
     //c->cd(2)->SetLogz();
   }
+
+
+
+
   
+  if (0){ //plot the size of the correction vs Q2 for the collision:
+    c=new TCanvas(Form("c%d",nc),"canvas",1200,500);
+    nc++;
+    c->Divide(3,1);
+    c->cd(1)->SetLogx();
+    g=new TGraph(vq2.size(),&(vQ2[0]),&(vcorr[0]));
+    g->SetTitle("Size of FF correction vs Q^2 (assuming ISR A') ;Q^2 (GeV^2);cross section correction");
+    g->Draw("A*");
+    c->cd(2)->SetLogy();
+    TH1F *hCorrection=new TH1F("hCorrection","Form Factor Correction;ratio of FF/pointlike;event weight",200,0,3);
+    for (int i=0;i<vq2.size();i++){
+      hCorrection->Fill(vcorr[i],vw[i]);
+    }
+    hCorrection->Draw();
+  }
   return;
 }

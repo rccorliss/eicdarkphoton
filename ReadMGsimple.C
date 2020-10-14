@@ -31,11 +31,19 @@ void ReadMGsimple(const char* filename="eic20x250_ep_epee.1.ttree.root"){
     int startat=filenameT.Index("sum");
     std::sscanf(filename+startat,"sum%d_%*s",&nruns);
   }
-  float weightscale=1/(1.0*nruns);
-  printf("reweighting assuming %d files, weightscale=%f\n",nruns,weightscale);
-  
+  //the proper weighting can be seen by tracing the translateMGsimple.C and generate_events code in MG.
+  //the proper weight is not 1/nruns, but 1/nevents!
+  //float weightscale=1/(1.0*nruns);
+  //printf("reweighting assuming %d files, weightscale=%f\n",nruns,weightscale);
+
   TFile *file=TFile::Open(filename,"READ");
   TTree* mTree=(TTree*)(file->Get("madTree"));
+
+  //proper weighting, as of OCt 2020:
+  float weightscale=1/(1.0*mTree->GetEntries());
+  //printf("reweighting assuming %d files, weightscale=%f\n",nruns,weightscale);
+
+  
   TString dj=filename;
   dj.ReplaceAll("ttree.root","djangoh.txt");
   FILE *djangoh=fopen(dj.Data(),"w");
