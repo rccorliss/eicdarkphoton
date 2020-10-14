@@ -1,6 +1,8 @@
 
 #include "TLorentzVector.h"
 
+TRandom3 rng;
+
 struct Dataset{
   TString filename;
   TFile *file;
@@ -14,6 +16,112 @@ struct FloatErr{
   float err;
 };
 
+struct EventFourVectors{
+  TLorentzVector *P0;//beam proton
+  TLorentzVector *e0;//beam electron
+  TLorentzVector *Pf;//final state proton
+  TLorentzVector *es;//final state spectator e-
+  TLorentzVector *A;//intermediate A' or gammastar
+  TLorentzVector *e;//decay electron
+  TLorentzVector *p;//decay positron
+};
+EventFourVectors det;//=MakeEventFourVectors(); //detector and fixed-target frame four vectors.
+EventFourVectors fix;//=MakeEventFourVectors(); //these are manually associated with the pointers below:
+EventFourVectors smear;//=MakeEventFourVectors(); //smeared four vectors
+
+
+void SetFixedTargetVectors(){
+  TVector3 boostToFixed=det.P0->BoostVector();//get the boost from lab to proton beam frame
+  *(fix.P0)=*(det.P0); fix.P0->Boost(-1*boostToFixed);
+  *(fix.e0)=*(det.e0); fix.e0->Boost(-1*boostToFixed);
+  *(fix.Pf)=*(det.Pf); fix.Pf->Boost(-1*boostToFixed);
+  *(fix.es)=*(det.es); fix.es->Boost(-1*boostToFixed);
+  *(fix.A)=*(det.A); fix.A->Boost(-1*boostToFixed);
+  *(fix.e)=*(det.e); fix.e->Boost(-1*boostToFixed);
+  *(fix.p)=*(det.p); fix.p->Boost(-1*boostToFixed);
+};
+
+
+
+TLorentzVector SmearHadron(TLorentzVector x){
+  return x; //I don't care about the hadron for now.
+}
+
+
+
+TLorentzVector SmearLepton(TLorentzVector x){
+  if (x.Vect().Mag()==0) return x; //can't smear a zero.
+  //use the handbook detector to smear the momentum vector.  WE assume this always washes out the mass of the particle, so we make it massless.
+  TLorentzVector smeared(0,0,0,0);
+  float eta=x.Eta();
+  float sigma=0;
+  if (eta<-4.5 || eta>4.5){
+    //no tracking or cal
+    return smeared;
+  }
+  smeared=x;
+  TVector3 mom=x.Vect();
+
+  if (eta<-3.5){   //EMcal Zone: -- should this override the tracking as well?
+    smeared.SetPhi(rng.Gaus(smeared.Phi(),0.001));
+    smeared.SetTheta(rng.Gaus(smeared.Theta(),0.001));
+    //this applies to all angles, but tracking will do better, so only apply if outside of tracking.
+  } else if (eta <-2.5){//backward tracking
+    mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.001*mom.Mag2(),2)+pow(0.02*mom.Mag(),2))));
+    smeared.SetVectM(mom,0);
+  } else if (eta <-1.0){//backward tracking
+    mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.01*mom.Mag(),2))));
+    smeared.SetVectM(mom,0);
+  } else if (eta <1.0){//mid tracking
+    mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.005*mom.Mag(),2))));
+    smeared.SetVectM(mom,0);
+  } else if (eta <2.5){//forward tracking
+    mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.01*mom.Mag(),2))));
+    smeared.SetVectM(mom,0);
+  } else if (eta <3.5){
+    mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.001*mom.Mag2(),2)+pow(0.02*mom.Mag(),2))));
+    smeared.SetVectM(mom,0);
+  } if (eta<4.5){    //EMcal Zone:  (see question above.)
+    smeared.SetPhi(rng.Gaus(smeared.Phi(),0.001));
+    smeared.SetTheta(rng.Gaus(smeared.Theta(),0.001));
+    //this applies to all angles, but tracking will do better, so only apply if outside of tracking.
+  }
+
+  //we ought to also smear the energy, but the tracking precision will beat that as long as we have tracking, so we only need to smear in the range outside that.
+  if (eta<-3.5){
+    mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.02*mom.Mag(),2)+pow(0.01,2)*mom.Mag())));
+    smeared.SetVectM(mom,0);
+  } else if (eta>3.5){
+    mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.02*mom.Mag(),2)+pow(0.12,2)*mom.Mag())));
+    smeared.SetVectM(mom,0);
+  } 
+  return smeared;
+}
+
+void SmearVectors(){
+  *(smear.P0)=*(det.P0);//input beam
+  *(smear.e0)=*(det.e0);//input beam
+  *(smear.Pf)=SmearHadron(*(det.Pf));
+  *(smear.es)=SmearLepton(*(det.es));
+  *(smear.e)=SmearLepton(*(det.e));
+  *(smear.p)=SmearLepton(*(det.p));
+  *(smear.A)=*(smear.e)+*(smear.p);
+  return;
+}
+
+EventFourVectors MakeEventFourVectors(){
+  //this is so obviously a class...
+  EventFourVectors x;
+  x.P0=new TLorentzVector(0,0,0,0);
+  x.e0=new TLorentzVector(0,0,0,0);
+  x.Pf=new TLorentzVector(0,0,0,0);
+  x.es=new TLorentzVector(0,0,0,0);
+  x.A=new TLorentzVector(0,0,0,0);
+  x.e=new TLorentzVector(0,0,0,0);
+  x.p=new TLorentzVector(0,0,0,0);
+  return x;
+}
+  
 Dataset MakeData(const char* f, float m, const char *tname="oTree",const char *shortname="unset"){
   Dataset temp;
   temp.filename=f;
@@ -84,49 +192,119 @@ float MottPoint(float E, float M2, float Q2, float theta){
 
 void ReadOtree(char *treefile){
   Dataset d=MakeData(treefile,0,"oTree","data");
-
+  smear=MakeEventFourVectors();
+ 
   //initial state:
-  TLorentzVector *e04=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("e04",&e04);
-  TLorentzVector *P04=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("P04",&P04);
+  TLorentzVector *e04=det.e0=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("e04",&e04);
+  TLorentzVector *P04=det.P0=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("P04",&P04);
 
   //intermediate state:  
-  TLorentzVector *A4=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("A4",&A4);
+  TLorentzVector *A4=det.A=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("A4",&A4);
   TLorentzVector *e14=new TLorentzVector(0,0,0,0); //beam electron after ISR. not from the tree.  We have to build this ourselves
   TLorentzVector *ef4=new TLorentzVector(0,0,0,0); //final state electron before FSR.  not from the tree.  We have to build this ourselves
   float Q2; d.tree->SetBranchAddress("Q2",&Q2);
   
   //final state:
-  TLorentzVector *P4=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("P4",&P4);
-  TLorentzVector *es4=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("es4",&es4);
-  TLorentzVector *p4=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("p4",&p4);
-  TLorentzVector *e4=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("e4",&e4);
+  TLorentzVector *P4=det.Pf=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("P4",&P4);
+  TLorentzVector *es4=det.es=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("es4",&es4);
+  TLorentzVector *p4=det.p=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("p4",&p4);
+  TLorentzVector *e4=det.e=new TLorentzVector(0,0,0,0); d.tree->SetBranchAddress("e4",&e4);
+  //for backward compatibility, we manually define the boosted as well:
+  TLorentzVector *P04f,*e04f,*P4f,*p4f,*e4f,*es4f,*e14f, *ef4f,*A4f;
+  //initial state
+  P04f=fix.P0=new TLorentzVector(*P04);
+  e04f=fix.e0=new TLorentzVector(*e04);
+  //final states:
+  P4f=fix.Pf=new TLorentzVector(*P4);
+  es4f=fix.es=new TLorentzVector(*es4);
+  p4f=fix.p=new TLorentzVector(0,0,0,0);
+  e4f=fix.e=new TLorentzVector(0,0,0,0);
+
+  //tentative intermediate states
+  ef4f=new TLorentzVector(0,0,0,0);
+  e14f=new TLorentzVector(0,0,0,0);
+  A4f=fix.A=new TLorentzVector(0,0,0,0);
 
   //event weight
   float w; d.tree->SetBranchAddress("w",&w);
   
   d.tree->GetEntry(0);
   d.mass=A4->M();
-  float wscale=15.0/d.n; //temporary to check the scale per discussion with Jan
+  float wscale=1.0/d.n; //temporary to check the scale per discussion with Jan
   //d.tree->Draw("es.Z()");
 
 
+
+
+
+
+  
   //outputs:
   vector<double> ve,vq2,vq2alt,vq2best,vq2check,vq2checkISR,vq2checkFSR,vQ2,vxs,vw,vth,vcorr;
   TH1F *hXsComparison=new TH1F("hXsComparison","total weight of events vs xs from ep scatter;xs;weight",1e5,1e-12,1e12);
   TH1F *hXsLogComparison=new TH1F("hXsLogComparison","total weight of events vs Log10(xs) from ep scatter;log10(xs);weight/barn-width",100,-12,12);
-  TH1F *hAngle=new TH1F("hANgle","total weight of events vs electron theta from ep scatter;theta (rad);weight",50,0,1e-5);
+  TH1F *hAngle=new TH1F("hAngle","total weight of events vs electron theta from ep scatter;theta (rad);weight",50,0,1e-3);
+  TH2F *hPositronPolar=new TH2F("hPositronPolar","positron energy and direction;theta (rad);energy (GeV)",60,-TMath::Pi(),TMath::Pi(),50,0,30);
+  TH2F *hParticleMom[5];
+  TH2F *hPositronMom=hParticleMom[0]=new TH2F("hPositronMom","positron long vs transverse momentum;pZ;pT",100,-30,30,50,0,30);
+  TH2F *hElectronMom=hParticleMom[1]=new TH2F("hElectronMom","decay electron long vs transverse momentum;pZ;pT",100,-30,30,50,0,30);
+  TH2F *hSpectatorMom=hParticleMom[2]=new TH2F("hSpectatorMom","spectator electron long vs transverse momentum;pZ;pT",100,-30,30,50,0,30);
+  TH2F *hAPrimeMom=hParticleMom[3]=new TH2F("hAPrimeMom","heavy photon long vs transverse momentum;pZ;pT",100,-30,30,50,0,30);
+  TH2F *hProtonMom=hParticleMom[4]=new TH2F("hProtonMom","proton long vs transverse momentum;pZ;pT",100,-250,250,50,0,30);
+  TH2F *hFixParticleMom[5];
+  TH2F *hFixPositronMom=hFixParticleMom[0]=new TH2F("hFixPositronMom","positron pT vs pZ in Fixed Target;pZ;pT",100,-1000,12000,50,0,30);
+  TH2F *hFixElectronMom=hFixParticleMom[1]=new TH2F("hFixElectronMom","decay electron pT vs pZ in Fixed Target;pZ;pT",100,-1000,12000,50,0,30);
+  TH2F *hFixSpectatorMom=hFixParticleMom[2]=new TH2F("hFixSpectatorMom","spectator electron pT vs pZ in Fixed Target;pZ;pT",100,-1000,12000,50,0,30);
+  TH2F *hFixAPrimeMom=hFixParticleMom[3]=new TH2F("hFixAPrimeMom","heavy photon pT vs pZ in Fixed Target;pZ;pT",100,-1000,12000,50,0,30);
+  TH2F *hFixProtonMom=hFixParticleMom[4]=new TH2F("hFixProtonMom","proton pT vs pZ in Fixed Target;pZ;pT",100,-10,100,50,0,30);
 
+  TH2F* hQ2Angle=new TH2F("hQ2Angle","Q2 and fixed-target scattering angle of elastic e-;theta (rad);Q2 (GeV^2)",100,0,3.14,100,-10,100);
+  TH2F* hLogsQ2Angle=new TH2F("hLogsQ2Angle","log10(Q2) and fixed-target scattering angle of elastic e-;log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
+  TH2F* hISRLogsQ2Angle=new TH2F("hISRLogsQ2Angle","log10(Q2) and fixed-target scattering angle assuming ISR A';log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
+  TH2F* hFSRLogsQ2Angle=new TH2F("hFSRLogsQ2Angle","log10(Q2) and fixed-target scattering angle assuming FSR A';log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
   
 
   for (int i=0;i<d.n;i++){
     d.tree->GetEntry(i);
     //w=15*w; //hack to check a weighting issue.
-    //construct the intermediate electron assuming the A' radiates off the initial state:
-    *e14=*e04-*A4;
-    //construct the interfinal electron assuming the A' radiates off the pre-final state:
-    *ef4=*es4+*A4;
-
+    w*=wscale; //scale weight tot he number of entries.  Careful if adding disjoint sets!
     
+    //generate the correct fixed target fourvectors:
+    SetFixedTargetVectors();//boosts the tree vectors to the proton state.
+    //smear the detector vectors into the 'smear' counterparts
+    SmearVectors();
+    
+    //construct the pre-elastic scatter electron assuming the A' radiates off the initial state:
+    *e14=*e04-*A4;
+    *e14f=*e04f-*A4f;
+    
+    //construct the post-elastic scatter electron assuming the A' radiates off that pre-final state:
+    *ef4=*es4+*A4;
+    *ef4f=*es4f+*A4f;
+
+    //plot momentum and direction for the particles:
+    hPositronPolar->Fill(det.p->Theta(),det.p->E(),w);
+    hPositronMom->Fill(det.p->Vect().Z(),det.p->Vect().Perp(),w);
+    hElectronMom->Fill(det.e->Vect().Z(),det.e->Vect().Perp(),w);
+    hAPrimeMom->Fill(det.A->Vect().Z(),det.A->Vect().Perp(),w);
+    hProtonMom->Fill(det.Pf->Vect().Z(),det.Pf->Vect().Perp(),w);
+    hSpectatorMom->Fill(det.es->Vect().Z(),det.es->Vect().Perp(),w);
+    hFixPositronMom->Fill(fix.p->Vect().Z(),fix.p->Vect().Perp(),w);
+    hFixElectronMom->Fill(fix.e->Vect().Z(),fix.e->Vect().Perp(),w);
+    hFixAPrimeMom->Fill(fix.A->Vect().Z(),fix.A->Vect().Perp(),w);
+    hFixProtonMom->Fill(fix.Pf->Vect().Z(),fix.Pf->Vect().Perp(),w);
+    hFixSpectatorMom->Fill(fix.es->Vect().Z(),fix.es->Vect().Perp(),w);
+
+    //plot Q2 and final-state electron angle for the spectator:
+    //q=e_before-e_after=(e_beam-A)-e_final if ISR = e_beam-(e_final+A) if FSR, so q same either way:)
+    // TLorentzVector elasticq=*(det.e0)-*(det.A)-*(det.es);
+    TLorentzVector protonq=*(det.Pf)-*(det.P0);
+    float elasticq2=-protonq*protonq;//elasticq*elasticq;
+    hQ2Angle->Fill(fix.es->Theta(),elasticq2,w);
+    hLogsQ2Angle->Fill(log10(fix.es->Theta()),log10(elasticq2),w);
+    hISRLogsQ2Angle->Fill(log10(fix.es->Angle(e14f->Vect())),log10(elasticq2),w);
+    hFSRLogsQ2Angle->Fill(log10(ef4f->Angle(fix.e0->Vect())),log10(elasticq2),w);
+    /* outdated:
     //compute the angles in the fixed target frame:
     //first, boost into the fixed target frame:
     TVector3 boostToFixed=P04->BoostVector();
@@ -142,6 +320,7 @@ void ReadOtree(char *treefile){
     e14f=new TLorentzVector(*e14); e14f->Boost(-1*boostToFixed);//after ISR
     A4f=new TLorentzVector(*A4); A4f->Boost(-1*boostToFixed);
     //now these are in the fixed target frame.
+    */
     double q2check=(*P4f-*P04f)*(*P4f-*P04f);
     double q2checkISR=(*es4f-*e14f)*(*es4f-*e14f);
     double q2checkFSR=(*ef4f-*e04f)*(*ef4f-*e04f);
@@ -207,13 +386,13 @@ void ReadOtree(char *treefile){
     vth.push_back(theta);
     vcorr.push_back(ffcorrection);
 
-    hXsComparison->Fill(xs,w*wscale);
-    hAngle->Fill(theta,w*wscale);
+    hXsComparison->Fill(xs,w);
+    hAngle->Fill(theta,w);
 
     int bin=hXsLogComparison->FindBin(log10(xs));
     double width=pow(10,hXsLogComparison->GetBinLowEdge(bin+1))-pow(10,hXsLogComparison->GetBinLowEdge(bin));
     //printf("bin width=%E, w/width=%E\n",width,w/width);
-    hXsLogComparison->Fill(log10(xs),w*wscale/width);
+    hXsLogComparison->Fill(log10(xs),w/width);
     
     //P04f->Print();
     //boostToFixed.Print();
@@ -227,6 +406,81 @@ void ReadOtree(char *treefile){
   TGraph *g;
   TGraph2D *g2;
 
+ if (0){ //plot the particle directions in the lab frame
+    c=new TCanvas(Form("c%d",nc),"canvas",1200,800);
+    nc++;
+    c->Divide(1,2);
+    c->cd(1)->Divide(3,1);
+    //hPositronPolar->Draw("lego2 pol");
+    //hPositronPolar->Draw("colz");
+    //c->cd(2);
+    //hPositronMom->Draw("colz");
+
+    for (int i=0;i<3;i++){
+      c->cd(1)->cd(i+1)->SetLogz();
+      hParticleMom[i]->Draw("colz");
+    }
+    c->cd(2)->Divide(2,1);
+    for (int i=0;i<2;i++){
+      c->cd(2)->cd(i+1)->SetLogz();
+      hParticleMom[i+3]->Draw("colz");
+    }
+      
+ }
+
+ if (0){ //plot the elastic scatter components in the fixed target frame
+    c=new TCanvas(Form("c%d",nc),"canvas",1200,400);
+    nc++;
+    c->Divide(5,1);
+    c->cd(1)->SetLogz();//->Divide(3,1);
+    hQ2Angle->Draw("colz");
+    c->cd(2)->SetLogz();//->Divide(3,1);
+    hLogsQ2Angle->Draw("colz");
+    c->cd(3)->SetLogz();//->Divide(3,1);
+    hISRLogsQ2Angle->Draw("colz");
+    c->cd(4)->SetLogz();//->Divide(3,1);
+    hFSRLogsQ2Angle->Draw("colz");
+    c->cd(5)->SetLogz();
+    int nx=hLogsQ2Angle->GetNbinsX();
+    int ny=hLogsQ2Angle->GetNbinsY();
+    double logthetas[nx],logq2[ny];
+    hLogsQ2Angle->GetXaxis()->GetCenter(logthetas);
+    hLogsQ2Angle->GetYaxis()->GetCenter(logq2);
+    TH2F *hCorrTemp=new TH2F(*hLogsQ2Angle);
+    hCorrTemp->SetTitle("XS Form Factor Correction vs Q2 and scatter angle;log10(theta) (rad);log10(Q2) (GeV^2)");
+    for (int i=0;i<nx;i++){
+      float th=pow(10,logthetas[i]);
+      for (int j=0;j<ny;j++){
+	float q2=pow(10,logq2[j]);
+	float tau=Tau(Q2,0.938*0.938);
+	hCorrTemp->Fill(logthetas[i],logq2[j],GeGmFF(tau,th,q2)/PointFF(tau,th));
+      }
+    }
+    hCorrTemp->Draw("colz");
+	  
+ }
+
+ if (0){ //plot the particle directions in the fixed target frame
+    c=new TCanvas(Form("c%d",nc),"canvas",1200,800);
+    nc++;
+    c->Divide(1,2);
+    c->cd(1)->Divide(3,1);
+    //hPositronPolar->Draw("lego2 pol");
+    //hPositronPolar->Draw("colz");
+    //c->cd(2);
+    //hPositronMom->Draw("colz");
+
+    for (int i=0;i<3;i++){
+      c->cd(1)->cd(i+1)->SetLogz();
+      hFixParticleMom[i]->Draw("colz");
+    }
+    c->cd(2)->Divide(2,1);
+    for (int i=0;i<2;i++){
+      c->cd(2)->cd(i+1)->SetLogz();
+      hFixParticleMom[i+3]->Draw("colz");
+    }
+      
+ }
   
   if (0){ //plot the Q^2 comparison
     c=new TCanvas(Form("c%d",nc),"canvas",1200,800);
@@ -309,7 +563,7 @@ void ReadOtree(char *treefile){
 
 
   
-  if (1){ //compare weight vs theta to the cross section calculated for same 
+  if (0){ //compare weight vs theta to the cross section calculated for same 
     c=new TCanvas(Form("c%d",nc),"canvas",1200,400);
     nc++;
 
