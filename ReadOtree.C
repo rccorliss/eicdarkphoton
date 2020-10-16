@@ -64,7 +64,7 @@ TLorentzVector SmearLepton(TLorentzVector x){
   float eta=x.Eta();
   float sigma=0;
   if (eta<-4.5 || eta>4.5){
-    //no tracking or cal
+    //no tracking or cal.  return a zero vector to indicate the particle was lost.
     return smeared;
   }
   smeared=x;
@@ -200,7 +200,7 @@ float MottPoint(float E, float M2, float Q2, float theta){
 }
 
 
-void ReadOtree(char *treefile, bool isBg=false){
+void ReadOtree(char *treefile, bool isBg=false, float forcedMass=0){
   Dataset d=MakeData(treefile,0,"oTree","data");
   smear=MakeEventFourVectors();
  
@@ -241,9 +241,14 @@ void ReadOtree(char *treefile, bool isBg=false){
   d.tree->GetEntry(0);
   d.mass=A4->M();
   float wscale=1.0;//Now handled in ReadMGsimple.C.  for old signal, I need to divide here by: /d.n;// per discussion with Jan.
+  float rangefactor=0.05;//how far up and down from the nominal mass to scan when looking 'nearby'
   if (isBg){
     wscale=1.0; //for bg sets where I have summed together many disjoint sets, I do the per-set norm outside of this code
-    d.mass=25;
+    if (forcedMass==0) {
+      d.mass=25;
+    } else {
+      d.mass=forcedMass;
+    }
   }
   //d.tree->Draw("es.Z()");
 
@@ -278,16 +283,17 @@ void ReadOtree(char *treefile, bool isBg=false){
   TH2F* hISRLogsQ2Angle=new TH2F("hISRLogsQ2Angle","log10(Q2) and fixed-target scattering angle assuming ISR A';log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
   TH2F* hFSRLogsQ2Angle=new TH2F("hFSRLogsQ2Angle","log10(Q2) and fixed-target scattering angle assuming FSR A';log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
 
-  TH1F* hAmass=new TH1F("hAmass","True intermediate particle mass from MG record;Mass (GeV)",100,d.mass*0.95,d.mass*1.05);
-  TH1F* hPairMass=new TH1F("hPairMass","Unsmeared e+e- invariant mass;Mass (GeV)",100,d.mass*0.95,d.mass*1.05);
-  TH1F* hRecoMass=new TH1F("hRecoMass","Smeared e+e- invariant mass;Mass (GeV)",100,d.mass*0.95,d.mass*1.05);
-  TH1F* hRecoMassWide=new TH1F("hRecoMass","Smeared e+e- invariant mass;Mass (GeV)",200,0,200);
-  TH2F* hCompareMass=new TH2F("hCompareMass","Unsmeared e+e- invariant mass vs MG truth;True Mass (GeV);Pair Mass (GeV)",100,d.mass*0.95,d.mass*1.05,100,d.mass*0.95,d.mass*1.05);
-  TH2F* hCompareRecoMass=new TH2F("hCompareRecoMass","Smeared e+e- invariant mass vs MG truth;True Mass (GeV);Pair Mass (GeV)",100,d.mass*0.95,d.mass*1.05,100,d.mass*0.95,d.mass*1.05);
-  TH2F* hRecoMassPosEta=new TH2F("hRecoMassPosEta","Smeared e+e- invariant mass vs positron eta;eta;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
-  TH2F* hRecoMassSumEta=new TH2F("hRecoMassSumEta","Smeared e+e- invariant mass vs sum of etas;eta e+ + eta e-;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
-  TH2F* hTrueMassPosEta=new TH2F("hTrueMassPosEta","true e+e- invariant mass vs positron eta;eta;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
-  TH2F* hTrueMassSumEta=new TH2F("hTrueMassSumEta","true e+e- invariant mass vs sum of etas;eta e+ + eta e-;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
+  TH1F* hAmass=new TH1F("hAmass","True intermediate particle mass from MG record;Mass (GeV)",100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  TH1F* hPairMass=new TH1F("hPairMass","Unsmeared e+e- invariant mass;Mass (GeV)",100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  TH1F* hRecoMass=new TH1F("hRecoMass","Smeared e+e- invariant mass;Mass (GeV)",100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  TH1F* hRecoMassWide=new TH1F("hRecoMassWide","Smeared e+e- invariant mass;Mass (GeV)",200,0,200);
+  TH2F* hCompareMass=new TH2F("hCompareMass","Unsmeared e+e- invariant mass vs MG truth;True Mass (GeV);Pair Mass (GeV)",100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor),100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  TH2F* hCompareRecoMass=new TH2F("hCompareRecoMass","Smeared e+e- invariant mass vs MG truth;True Mass (GeV);Pair Mass (GeV)",100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor),100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  
+  TH2F* hRecoMassPosEta=new TH2F("hRecoMassPosEta","Smeared e+e- invariant mass vs positron eta;eta;Mass (GeV)",20,-5,5,100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  TH2F* hRecoMassSumEta=new TH2F("hRecoMassSumEta","Smeared e+e- invariant mass vs sum of etas;eta e+ + eta e-;Mass (GeV)",20,-5,5,100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  TH2F* hTrueMassPosEta=new TH2F("hTrueMassPosEta","true e+e- invariant mass vs positron eta;eta;Mass (GeV)",20,-5,5,100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
+  TH2F* hTrueMassSumEta=new TH2F("hTrueMassSumEta","true e+e- invariant mass vs sum of etas;eta e+ + eta e-;Mass (GeV)",20,-5,5,100,d.mass*(1.0-rangefactor),d.mass*(1.0+rangefactor));
   
   TH2F * hLogDeltaEtaVsEta=new TH2F("hLogDeltaEtaVsEta","Log Delta Eta vs Eta;eta;abs(log10(eta-etatrue))",50,-6,6,50,-6,2);
   TH2F * hLogDeltaPtVsEta=new TH2F("hLogDeltaPtVsEta","Log (#Delta Pt)/Pt vs Eta;eta;abs(log10(pt-pttrue/pttrue))",50,-6,6,50,-6,2);
@@ -301,6 +307,10 @@ void ReadOtree(char *treefile, bool isBg=false){
   TH2F * hRecoPairPts=new TH2F("hRecoPairPts","smeared e- pT vs e+ pT;pT e+  (GeV);pT e-  (GeV)",50,0,40,50,0,40);
   TH1F* hTrueDeltaPhi=new TH1F("hTrueDeltaPhi","true e- phi relative to e+;#Delta #phi (rad)", 100,0,2*TMath::Pi());
   TH1F* hRecoDeltaPhi=new TH1F("hRecoDeltaPhi","smeared e- phi relative to e+;#Delta #phi (rad)", 100,0,2*TMath::Pi());
+  TH1F* hTrueDeltaPhiLocal=new TH1F("hTrueDeltaPhiLocal",Form("true e- phi relative to e+ near mass=%1.2f GeV;#Delta #phi (rad)",d.mass), 100,0,2*TMath::Pi());
+  TH1F* hRecoDeltaPhiLocal=new TH1F("hRecoDeltaPhiLocal",Form("smeared e- phi relative to e+ near mass=%1.2f GeV;#Delta #phi (rad)",d.mass), 100,0,2*TMath::Pi());
+  TH1F* hTrueSumEta=new TH1F("hTrueSumEta",Form("true sum of daughter etas near mass=%1.2f GeV;#eta_{+}+#eta_{-}",d.mass), 100,-5,5);
+  TH1F* hRecoSumEta=new TH1F("hRecoSumEta",Form("smeared sum of daughter etas near mass=%1.2f GeV;#eta_{+}+#eta_{-}",d.mass), 100,-5,5);
 
   for (int i=0;i<d.n;i++){
     d.tree->GetEntry(i);
@@ -356,40 +366,64 @@ void ReadOtree(char *treefile, bool isBg=false){
     if (PartOk(det.p) && PartOk(det.e)){
       hPairMass->Fill(tempA.M(),w);
       hCompareMass->Fill(det.A->M(),tempA.M(),w);
+      hTrueMassPosEta->Fill(det.p->Eta(),det.A->M(),w);
+      hTrueMassSumEta->Fill(det.p->Eta()+det.e->Eta(),det.A->M(),w);
     }
+
+    //calculate the other possible mass, in case we're dealing with bg:
+    TLorentzVector detOtherA=*(det.p)+*(det.es);
+    TLorentzVector smearOtherA=*(smear.p)+*(smear.es);
+    
+    //plot smear mass and mass vs particle variables:
     if (PartOk(smear.p) && PartOk(smear.e)) {//only plot these if the smear particle exists (is in detector range)
       hRecoMass->Fill(smear.A->M(),w);
       hRecoMassWide->Fill(smear.A->M(),w);
       hCompareRecoMass->Fill(det.A->M(),smear.A->M(),w);
-      hRecoMassPosEta->Fill(det.p->Eta(),smear.A->M(),w);
+      hRecoMassPosEta->Fill(smear.p->Eta(),smear.A->M(),w);
+      hRecoMassSumEta->Fill(smear.p->Eta()+smear.e->Eta(),smear.A->M(),w);
     }
     if (isBg){
-      tempA=*(det.p)+*(det.es);
-      TLorentzVector tempSmearA=*(smear.p)+*(smear.es);
-      if (PartOk(det.p) && PartOk(det.es)) hPairMass->Fill(tempA.M(),w);
+      if (PartOk(det.p) && PartOk(det.es)) {//should never be lost, but just to be sure.
+	hPairMass->Fill(detOtherA.M(),w);
+	hTrueMassPosEta->Fill(det.p->Eta(),detOtherA.M(),w);
+	hTrueMassSumEta->Fill(det.p->Eta()+det.es->Eta(),detOtherA.M(),w);
+      }
       if (PartOk(smear.p) && PartOk(smear.es)){
-	  hRecoMass->Fill(tempSmearA.M(),w);
-	  hRecoMassWide->Fill(tempSmearA.M(),w);
-	  hCompareRecoMass->Fill(tempA.M(),tempSmearA.M(),w);
-	  hRecoMassPosEta->Fill(det.p->Eta(),tempSmearA.M(),w);
-	}
+	hRecoMass->Fill(smearOtherA.M(),w);
+	hRecoMassWide->Fill(smearOtherA.M(),w);
+	hCompareRecoMass->Fill(detOtherA.M(),smearOtherA.M(),w);
+	hRecoMassPosEta->Fill(det.p->Eta(),smearOtherA.M(),w);
+	hRecoMassPosEta->Fill(smear.p->Eta(),smearOtherA.M(),w);
+	hRecoMassSumEta->Fill(smear.p->Eta()+smear.es->Eta(),smearOtherA.M(),w);
+      }
     }
- 
+
+
 
     float detdeltaphi=det.e->Phi()-det.p->Phi();
     if (detdeltaphi<0) detdeltaphi+=2*TMath::Pi();
     float smeardeltaphi=smear.e->Phi()-smear.p->Phi();
     if (smeardeltaphi<0) smeardeltaphi+=2*TMath::Pi();
+    
     if (PartOk(det.p) && PartOk(det.e)){
       hTrueDeltaPhi->Fill(detdeltaphi,w);
       hTruePairEtas->Fill(det.p->Eta(),det.e->Eta(),w);
       hTruePairPts->Fill(det.p->Pt(),det.e->Pt(),w);
+      if (abs(det.A->M()-d.mass)<rangefactor*d.mass){
+	hTrueDeltaPhiLocal->Fill(detdeltaphi,w);
+	hTrueSumEta->Fill(det.p->Eta()+det.e->Eta(),w);
+      }
     }
     if (PartOk(smear.p) && PartOk(smear.e)){
       hRecoDeltaPhi->Fill(smeardeltaphi,w);
       hRecoPairEtas->Fill(smear.p->Eta(),smear.e->Eta(),w);
       hRecoPairPts->Fill(smear.p->Pt(),smear.e->Pt(),w);
+      if (abs(smear.A->M()-d.mass)<rangefactor*d.mass){
+	hRecoDeltaPhiLocal->Fill(smeardeltaphi,w);
+	hRecoSumEta->Fill(smear.p->Eta()+smear.e->Eta(),w);
+      }
     }
+    
 
 
     if (isBg){
@@ -397,78 +431,68 @@ void ReadOtree(char *treefile, bool isBg=false){
       if (detdeltaphi<0) detdeltaphi+=2*TMath::Pi();
       smeardeltaphi=smear.es->Phi()-smear.p->Phi();
       if (smeardeltaphi<0) smeardeltaphi+=2*TMath::Pi();
-      if (det.p->Vect().Mag()>0 && det.es->Vect().Mag()>0){
+      if (PartOk(det.p) && PartOk(det.es)){
 	hTrueDeltaPhi->Fill(detdeltaphi,w);
 	hTruePairEtas->Fill(det.p->Eta(),det.es->Eta(),w);
 	hTruePairPts->Fill(det.p->Pt(),det.es->Pt(),w);
+	if (abs(detOtherA.M()-d.mass)<rangefactor*d.mass){
+	  hTrueDeltaPhiLocal->Fill(detdeltaphi,w);
+	  hTrueSumEta->Fill(det.p->Eta()+det.e->Eta(),w);
+	}
       }
-      if (smear.p->Vect().Mag()>0 && smear.es->Vect().Mag()>0){
+      if (PartOk(smear.p) && PartOk(smear.es)){
 	hRecoDeltaPhi->Fill(smeardeltaphi,w);
 	hRecoPairEtas->Fill(smear.p->Eta(),smear.es->Eta(),w);
 	hRecoPairPts->Fill(smear.p->Pt(),smear.es->Pt(),w);
-      }
+	if (abs(smearOtherA.M()-d.mass)<rangefactor*d.mass){
+	  hRecoDeltaPhiLocal->Fill(smeardeltaphi,w);
+	  hRecoSumEta->Fill(smear.p->Eta()+smear.e->Eta(),w);
+	}
+       }
     }
 
     
-    double q2check=(*P4f-*P04f)*(*P4f-*P04f);
-    double q2checkISR=(*es4f-*e14f)*(*es4f-*e14f);
-    double q2checkFSR=(*ef4f-*e04f)*(*ef4f-*e04f);
+    double q2check=-1*(*P4f-*P04f)*(*P4f-*P04f);
+    double q2checkISR=-1*(*es4f-*e14f)*(*es4f-*e14f);
+    double q2checkFSR=-1*(*ef4f-*e04f)*(*ef4f-*e04f);
 
-    
+    //assuming ISR:
     //the scattering angle is the angle between the incoming and outgoing electron:
     double theta=es4f->Angle(e14f->Vect());
     double sinth=TMath::Sin(theta/2.0);
     double costh=TMath::Cos(theta/2.0);
-
-    //the incoming energy is just the E term off the incoming electron:
+    //the incoming energy is just the E term off the incoming electron. In ISR, this is the post-radiation electron:
     double energy=e14f->E();
-
-
     //the 'eprime' recoil-corrected energy is from the eqn:
     double eprime=energy/(1+2*energy/P4f->M()*sinth*sinth);
-    double q2=-4*energy*eprime*sinth*sinth;
-    if (i<10){
-      printf( "i=%d e04f.E=%1.2E  e14f.E=%1.2E  theta=%1.2E  E'=%1.2E\n",i,e04f->E(),energy,theta,eprime);
-    }
+    double q2=4*energy*eprime*sinth*sinth;
 
     //assuming FSR:
     //the scattering angle is the angle between the incoming and outgoing electron:
     double alt_theta=ef4f->Angle(e04f->Vect());
     double alt_sinth=TMath::Sin(alt_theta/2.0);
-    double alt_costh=TMath::Cos(alt_theta/2.0);
-
     //the incoming energy is just the E term off the incoming electron.  in FSR, this is the beam energy:
     double alt_energy=e04f->E();
-
     //the 'eprime' recoil-corrected energy is from the eqn:
     double alt_eprime=alt_energy/(1+2*alt_energy/P4f->M()*alt_sinth*alt_sinth);
-    double alt_q2=-4*alt_energy*alt_eprime*alt_sinth*alt_sinth;
+    double alt_q2=4*alt_energy*alt_eprime*alt_sinth*alt_sinth;
 
     double bestq2=q2;
     if (abs(Q2+alt_q2)<abs(Q2+q2)) bestq2=alt_q2;
     
-
-    double alpha=1.0/137.0;
-
-
-    //double xs_0=alpha
-    double xs=alpha*alpha*costh*costh/(4*energy*energy*pow(sinth,4));
-    xs*=eprime/energy;
-    xs*=1 - q2/(2*P4f->M2())*(sinth*sinth)/(costh*costh);
-
-    float tau=Tau(Q2,P4f->M2());
-    
+    double xs=MottPoint(e14f->E(),P4f->M2(),q2,theta); //now separated into an independent function! yay!
+    float tau=Tau(Q2,P4f->M2()); 
     double ffcorrection=GeGmFF(tau,theta,Q2)/PointFF(tau,theta);
 
     
     //printf("cross section: xs=%E\n",xs);
     ve.push_back(energy);
-    vq2.push_back(-q2);
-    vq2alt.push_back(-alt_q2);
-    vq2check.push_back(-q2check);
-    vq2checkISR.push_back(-q2checkISR);
-    vq2checkFSR.push_back(-q2checkFSR);
-    vq2best.push_back(-bestq2);
+    vq2.push_back(q2);
+    vq2alt.push_back(alt_q2);
+    vq2check.push_back(q2check);
+    vq2checkISR.push_back(q2checkISR);
+    vq2checkFSR.push_back(q2checkFSR);
+    vq2best.push_back(bestq2);
     vQ2.push_back(Q2);
     vxs.push_back(xs);
     vw.push_back(w*wscale);
@@ -482,9 +506,11 @@ void ReadOtree(char *treefile, bool isBg=false){
     double width=pow(10,hXsLogComparison->GetBinLowEdge(bin+1))-pow(10,hXsLogComparison->GetBinLowEdge(bin));
     //printf("bin width=%E, w/width=%E\n",width,w/width);
     hXsLogComparison->Fill(log10(xs),w/width);
+    //if (i<10)  printf( "i=%d e04f.E=%1.2E  e14f.E=%1.2E  theta=%1.2E  E'=%1.2E\n",i,e04f->E(),energy,theta,eprime);
     
-    //P04f->Print();
-    //boostToFixed.Print();
+    //now apply some cuts and repeat.
+
+    //fill me in...
     
 
     
@@ -494,7 +520,6 @@ void ReadOtree(char *treefile, bool isBg=false){
   int nc=0;//number of canvases
   TGraph *g;
   TGraph2D *g2;
-
 
  if (1){ //plot the basic summary of the kinematics for the A'
     c=new TCanvas(Form("c%d",nc),"canvas",1200,600);
@@ -523,7 +548,8 @@ void ReadOtree(char *treefile, bool isBg=false){
     c->cd(2)->cd(5)->SetLogy();
     hRecoMass->Draw();
     if (isBg){
-      c->SaveAs("overviewBg.pdf");
+      c->SaveAs(Form("overviewM%2.2fGeV_bg.pdf",d.mass));
+      //c->SaveAs("overviewBg.pdf");
     } else {
       c->SaveAs(Form("overviewM%2.2fGeV.pdf",d.mass));
     }
@@ -533,13 +559,54 @@ void ReadOtree(char *treefile, bool isBg=false){
     hRecoMassWide->Draw();
     if (isBg){
       hRecoMassWide->SaveAs("uncutMassSpectrumBg.hist.root");
+      hRecoMass->SaveAs(Form("localMassSpectrumM%2.2fGeV_bg.hist.root",d.mass));
     } else {
       hRecoMassWide->SaveAs(Form("uncutMassSpectrumM%2.2fGeV.hist.root",d.mass));
       hRecoMass->SaveAs(Form("localMassSpectrumM%2.2fGeV.hist.root",d.mass));
-      
+ 
     }
 
+    TFile *plots;
+    if (isBg) {
+      plots=TFile::Open(Form("otreePlotsM%2.2fGeV_bg.hist.root",d.mass),"RECREATE");
+    } else {
+      plots=TFile::Open(Form("otreePlotsM%2.2fGeV.hist.root",d.mass),"RECREATE");
+    }
+    plots->cd();
+    hRecoMassWide->Write();
+    hRecoMass->Write();
+    hAmass->Write();
+    plots->Save();
+    plots->Close();
+
  }
+ if (1){ //plot some interesting possible cut variables
+    c=new TCanvas(Form("c%d",nc),"canvas",1400,800);
+    nc++;
+    c->Divide(4,2);
+    c->cd(1);
+    hTrueMassPosEta->Draw("colz");
+    c->cd(2);
+    hTrueMassSumEta->Draw("colz");
+    c->cd(3);
+    hTrueDeltaPhiLocal->Draw();
+    c->cd(4);
+    hTrueSumEta->Draw();
+    c->cd(5);
+    hRecoMassPosEta->Draw("colz");
+    c->cd(6);
+    hRecoMassSumEta->Draw("colz");
+    c->cd(7);
+    hRecoDeltaPhiLocal->Draw();
+    c->cd(8);
+    hRecoSumEta->Draw();
+     
+    if (isBg){
+       c->SaveAs(Form("cutoptionsM%2.2fGeV_bg.pdf",d.mass));
+    } else {
+      c->SaveAs(Form("cutoptionsM%2.2fGeV.pdf",d.mass));
+    }
+  }
 
 
  if (0){ //plot the particle directions in the lab frame
