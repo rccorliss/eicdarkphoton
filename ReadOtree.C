@@ -41,7 +41,15 @@ void SetFixedTargetVectors(){
   *(fix.p)=*(det.p); fix.p->Boost(-1*boostToFixed);
 };
 
+bool PartOk(TLorentzVector four){
+  if (four.Vect().Mag()>0) return true;
+  if (four.E()>0) return true;
+  return false;
+}
 
+bool PartOk(TLorentzVector *four){
+  return PartOk(*four);
+}
 
 TLorentzVector SmearHadron(TLorentzVector x){
   return x; //I don't care about the hadron for now.
@@ -73,6 +81,8 @@ TLorentzVector SmearLepton(TLorentzVector x){
     mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.01*mom.Mag(),2))));
     smeared.SetVectM(mom,0);
   } else if (eta <1.0){//mid tracking
+    //degraded by 10 to prove it works:
+    //mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.005*mom.Mag2(),2)+pow(0.05*mom.Mag(),2))));
     mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.005*mom.Mag(),2))));
     smeared.SetVectM(mom,0);
   } else if (eta <2.5){//forward tracking
@@ -81,7 +91,7 @@ TLorentzVector SmearLepton(TLorentzVector x){
   } else if (eta <3.5){
     mom.SetMag(rng.Gaus(mom.Mag(),sqrt(pow(0.001*mom.Mag2(),2)+pow(0.02*mom.Mag(),2))));
     smeared.SetVectM(mom,0);
-  } if (eta<4.5){    //EMcal Zone:  (see question above.)
+  } else if (eta<4.5){    //EMcal Zone:  (see question above.)
     smeared.SetPhi(rng.Gaus(smeared.Phi(),0.001));
     smeared.SetTheta(rng.Gaus(smeared.Theta(),0.001));
     //this applies to all angles, but tracking will do better, so only apply if outside of tracking.
@@ -190,7 +200,7 @@ float MottPoint(float E, float M2, float Q2, float theta){
 }
 
 
-void ReadOtree(char *treefile){
+void ReadOtree(char *treefile, bool isBg=false){
   Dataset d=MakeData(treefile,0,"oTree","data");
   smear=MakeEventFourVectors();
  
@@ -230,7 +240,11 @@ void ReadOtree(char *treefile){
   
   d.tree->GetEntry(0);
   d.mass=A4->M();
-  float wscale=1.0/d.n; //temporary to check the scale per discussion with Jan
+  float wscale=1.0;//Now handled in ReadMGsimple.C.  for old signal, I need to divide here by: /d.n;// per discussion with Jan.
+  if (isBg){
+    wscale=1.0; //for bg sets where I have summed together many disjoint sets, I do the per-set norm outside of this code
+    d.mass=25;
+  }
   //d.tree->Draw("es.Z()");
 
 
@@ -257,12 +271,36 @@ void ReadOtree(char *treefile){
   TH2F *hFixSpectatorMom=hFixParticleMom[2]=new TH2F("hFixSpectatorMom","spectator electron pT vs pZ in Fixed Target;pZ;pT",100,-1000,12000,50,0,30);
   TH2F *hFixAPrimeMom=hFixParticleMom[3]=new TH2F("hFixAPrimeMom","heavy photon pT vs pZ in Fixed Target;pZ;pT",100,-1000,12000,50,0,30);
   TH2F *hFixProtonMom=hFixParticleMom[4]=new TH2F("hFixProtonMom","proton pT vs pZ in Fixed Target;pZ;pT",100,-10,100,50,0,30);
+  TH2F *hRecoAPrimeMom=new TH2F("hRecoAPrimeMom","Reco A' pT vs pZ;pZ;pT",100,-30,30,50,0,30);
 
   TH2F* hQ2Angle=new TH2F("hQ2Angle","Q2 and fixed-target scattering angle of elastic e-;theta (rad);Q2 (GeV^2)",100,0,3.14,100,-10,100);
   TH2F* hLogsQ2Angle=new TH2F("hLogsQ2Angle","log10(Q2) and fixed-target scattering angle of elastic e-;log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
   TH2F* hISRLogsQ2Angle=new TH2F("hISRLogsQ2Angle","log10(Q2) and fixed-target scattering angle assuming ISR A';log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
   TH2F* hFSRLogsQ2Angle=new TH2F("hFSRLogsQ2Angle","log10(Q2) and fixed-target scattering angle assuming FSR A';log10(theta) (rad);log10(Q2) (GeV^2)",100,-7,1,100,-4,5);
+
+  TH1F* hAmass=new TH1F("hAmass","True intermediate particle mass from MG record;Mass (GeV)",100,d.mass*0.95,d.mass*1.05);
+  TH1F* hPairMass=new TH1F("hPairMass","Unsmeared e+e- invariant mass;Mass (GeV)",100,d.mass*0.95,d.mass*1.05);
+  TH1F* hRecoMass=new TH1F("hRecoMass","Smeared e+e- invariant mass;Mass (GeV)",100,d.mass*0.95,d.mass*1.05);
+  TH1F* hRecoMassWide=new TH1F("hRecoMass","Smeared e+e- invariant mass;Mass (GeV)",200,0,200);
+  TH2F* hCompareMass=new TH2F("hCompareMass","Unsmeared e+e- invariant mass vs MG truth;True Mass (GeV);Pair Mass (GeV)",100,d.mass*0.95,d.mass*1.05,100,d.mass*0.95,d.mass*1.05);
+  TH2F* hCompareRecoMass=new TH2F("hCompareRecoMass","Smeared e+e- invariant mass vs MG truth;True Mass (GeV);Pair Mass (GeV)",100,d.mass*0.95,d.mass*1.05,100,d.mass*0.95,d.mass*1.05);
+  TH2F* hRecoMassPosEta=new TH2F("hRecoMassPosEta","Smeared e+e- invariant mass vs positron eta;eta;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
+  TH2F* hRecoMassSumEta=new TH2F("hRecoMassSumEta","Smeared e+e- invariant mass vs sum of etas;eta e+ + eta e-;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
+  TH2F* hTrueMassPosEta=new TH2F("hTrueMassPosEta","true e+e- invariant mass vs positron eta;eta;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
+  TH2F* hTrueMassSumEta=new TH2F("hTrueMassSumEta","true e+e- invariant mass vs sum of etas;eta e+ + eta e-;Mass (GeV)",20,-5,5,100,d.mass*0.95,d.mass*1.05);
   
+  TH2F * hLogDeltaEtaVsEta=new TH2F("hLogDeltaEtaVsEta","Log Delta Eta vs Eta;eta;abs(log10(eta-etatrue))",50,-6,6,50,-6,2);
+  TH2F * hLogDeltaPtVsEta=new TH2F("hLogDeltaPtVsEta","Log (#Delta Pt)/Pt vs Eta;eta;abs(log10(pt-pttrue/pttrue))",50,-6,6,50,-6,2);
+  TH2F * hDeltaEtaVsEta=new TH2F("hDeltaEtaVsEta","Delta Eta vs Eta;eta;eta-etatrue",50,-6,6,50,-0.04,0.04);
+  TH2F * hDeltaPtVsEta=new TH2F("hDeltaPtVsEta"," (#Delta Pt)/Pt vs Eta;eta;pt-pttrue/pttrue",50,-6,6,50,-0.1,0.1);
+
+
+  TH2F * hTruePairEtas=new TH2F("hTruePairEtas","true e- eta vs e+ eta;eta e+;eta e-",50,-6,6,50,-6,6);
+  TH2F * hRecoPairEtas=new TH2F("hRecoPairEtas","smeared e- eta vs e+ eta;eta e+;eta e-",50,-6,6,50,-6,6);
+  TH2F * hTruePairPts=new TH2F("hTruePairPts","true e- pT vs e+ pT;pT e+  (GeV);pT e-  (GeV)",50,0,40,50,0,40);
+  TH2F * hRecoPairPts=new TH2F("hRecoPairPts","smeared e- pT vs e+ pT;pT e+  (GeV);pT e-  (GeV)",50,0,40,50,0,40);
+  TH1F* hTrueDeltaPhi=new TH1F("hTrueDeltaPhi","true e- phi relative to e+;#Delta #phi (rad)", 100,0,2*TMath::Pi());
+  TH1F* hRecoDeltaPhi=new TH1F("hRecoDeltaPhi","smeared e- phi relative to e+;#Delta #phi (rad)", 100,0,2*TMath::Pi());
 
   for (int i=0;i<d.n;i++){
     d.tree->GetEntry(i);
@@ -294,6 +332,12 @@ void ReadOtree(char *treefile){
     hFixAPrimeMom->Fill(fix.A->Vect().Z(),fix.A->Vect().Perp(),w);
     hFixProtonMom->Fill(fix.Pf->Vect().Z(),fix.Pf->Vect().Perp(),w);
     hFixSpectatorMom->Fill(fix.es->Vect().Z(),fix.es->Vect().Perp(),w);
+    hRecoAPrimeMom->Fill(smear.A->Vect().Z(),smear.A->Vect().Perp(),w);
+
+    hLogDeltaEtaVsEta->Fill(det.p->Eta(),log10(abs(smear.p->Eta()-det.p->Eta())),w);
+    hLogDeltaPtVsEta->Fill(det.p->Eta(),log10(abs((smear.p->Pt()-det.p->Pt())/det.p->Pt())),w);
+    hDeltaEtaVsEta->Fill(det.p->Eta(),smear.p->Eta()-det.p->Eta(),w);
+    hDeltaPtVsEta->Fill(det.p->Eta(),(smear.p->Pt()-det.p->Pt())/det.p->Pt(),w);
 
     //plot Q2 and final-state electron angle for the spectator:
     //q=e_before-e_after=(e_beam-A)-e_final if ISR = e_beam-(e_final+A) if FSR, so q same either way:)
@@ -304,23 +348,68 @@ void ReadOtree(char *treefile){
     hLogsQ2Angle->Fill(log10(fix.es->Theta()),log10(elasticq2),w);
     hISRLogsQ2Angle->Fill(log10(fix.es->Angle(e14f->Vect())),log10(elasticq2),w);
     hFSRLogsQ2Angle->Fill(log10(ef4f->Angle(fix.e0->Vect())),log10(elasticq2),w);
-    /* outdated:
-    //compute the angles in the fixed target frame:
-    //first, boost into the fixed target frame:
-    TVector3 boostToFixed=P04->BoostVector();
-    TLorentzVector *P04f,*e04f,*P4f,*es4f,*e14f, *ef4f,*A4f;
-    //initial state
-    P04f=new TLorentzVector(*P04); P04f->Boost(-1*boostToFixed);
-    e04f=new TLorentzVector(*e04); e04f->Boost(-1*boostToFixed);
-    //final states:
-    P4f=new TLorentzVector(*P4); P4f->Boost(-1*boostToFixed);
-    es4f=new TLorentzVector(*es4); es4f->Boost(-1*boostToFixed);
-    //tentative intermediate states
-    ef4f=new TLorentzVector(*ef4); ef4f->Boost(-1*boostToFixed);//before FSR
-    e14f=new TLorentzVector(*e14); e14f->Boost(-1*boostToFixed);//after ISR
-    A4f=new TLorentzVector(*A4); A4f->Boost(-1*boostToFixed);
-    //now these are in the fixed target frame.
-    */
+
+
+    //compare true A' mass to reco mass:
+    TLorentzVector tempA=*(det.p)+*(det.e);
+    hAmass->Fill(det.A->M(),w);
+    if (PartOk(det.p) && PartOk(det.e)){
+      hPairMass->Fill(tempA.M(),w);
+      hCompareMass->Fill(det.A->M(),tempA.M(),w);
+    }
+    if (PartOk(smear.p) && PartOk(smear.e)) {//only plot these if the smear particle exists (is in detector range)
+      hRecoMass->Fill(smear.A->M(),w);
+      hRecoMassWide->Fill(smear.A->M(),w);
+      hCompareRecoMass->Fill(det.A->M(),smear.A->M(),w);
+      hRecoMassPosEta->Fill(det.p->Eta(),smear.A->M(),w);
+    }
+    if (isBg){
+      tempA=*(det.p)+*(det.es);
+      TLorentzVector tempSmearA=*(smear.p)+*(smear.es);
+      if (PartOk(det.p) && PartOk(det.es)) hPairMass->Fill(tempA.M(),w);
+      if (PartOk(smear.p) && PartOk(smear.es)){
+	  hRecoMass->Fill(tempSmearA.M(),w);
+	  hRecoMassWide->Fill(tempSmearA.M(),w);
+	  hCompareRecoMass->Fill(tempA.M(),tempSmearA.M(),w);
+	  hRecoMassPosEta->Fill(det.p->Eta(),tempSmearA.M(),w);
+	}
+    }
+ 
+
+    float detdeltaphi=det.e->Phi()-det.p->Phi();
+    if (detdeltaphi<0) detdeltaphi+=2*TMath::Pi();
+    float smeardeltaphi=smear.e->Phi()-smear.p->Phi();
+    if (smeardeltaphi<0) smeardeltaphi+=2*TMath::Pi();
+    if (PartOk(det.p) && PartOk(det.e)){
+      hTrueDeltaPhi->Fill(detdeltaphi,w);
+      hTruePairEtas->Fill(det.p->Eta(),det.e->Eta(),w);
+      hTruePairPts->Fill(det.p->Pt(),det.e->Pt(),w);
+    }
+    if (PartOk(smear.p) && PartOk(smear.e)){
+      hRecoDeltaPhi->Fill(smeardeltaphi,w);
+      hRecoPairEtas->Fill(smear.p->Eta(),smear.e->Eta(),w);
+      hRecoPairPts->Fill(smear.p->Pt(),smear.e->Pt(),w);
+    }
+
+
+    if (isBg){
+      detdeltaphi=det.es->Phi()-det.p->Phi();
+      if (detdeltaphi<0) detdeltaphi+=2*TMath::Pi();
+      smeardeltaphi=smear.es->Phi()-smear.p->Phi();
+      if (smeardeltaphi<0) smeardeltaphi+=2*TMath::Pi();
+      if (det.p->Vect().Mag()>0 && det.es->Vect().Mag()>0){
+	hTrueDeltaPhi->Fill(detdeltaphi,w);
+	hTruePairEtas->Fill(det.p->Eta(),det.es->Eta(),w);
+	hTruePairPts->Fill(det.p->Pt(),det.es->Pt(),w);
+      }
+      if (smear.p->Vect().Mag()>0 && smear.es->Vect().Mag()>0){
+	hRecoDeltaPhi->Fill(smeardeltaphi,w);
+	hRecoPairEtas->Fill(smear.p->Eta(),smear.es->Eta(),w);
+	hRecoPairPts->Fill(smear.p->Pt(),smear.es->Pt(),w);
+      }
+    }
+
+    
     double q2check=(*P4f-*P04f)*(*P4f-*P04f);
     double q2checkISR=(*es4f-*e14f)*(*es4f-*e14f);
     double q2checkFSR=(*ef4f-*e04f)*(*ef4f-*e04f);
@@ -406,6 +495,53 @@ void ReadOtree(char *treefile){
   TGraph *g;
   TGraph2D *g2;
 
+
+ if (1){ //plot the basic summary of the kinematics for the A'
+    c=new TCanvas(Form("c%d",nc),"canvas",1200,600);
+    nc++;
+    c->Divide(1,2);
+    c->cd(1)->Divide(5,1);
+    c->cd(1)->cd(1)->SetLogy();
+    hTrueDeltaPhi->Draw();
+    c->cd(1)->cd(2)->SetLogz();
+    hTruePairEtas->Draw("colz");
+    c->cd(1)->cd(3)->SetLogz();
+    hTruePairPts->Draw("colz");
+    c->cd(1)->cd(4)->SetLogz();
+    hAPrimeMom->Draw("colz");
+    c->cd(1)->cd(5)->SetLogy();
+    hPairMass->Draw("hist");
+    c->cd(2)->Divide(5,1);
+    c->cd(2)->cd(1)->SetLogy();
+    hRecoDeltaPhi->Draw();
+    c->cd(2)->cd(2)->SetLogz();
+    hRecoPairEtas->Draw("colz");
+    c->cd(2)->cd(3)->SetLogz();
+    hRecoPairPts->Draw("colz");
+    c->cd(2)->cd(4)->SetLogz();
+    hRecoAPrimeMom->Draw("colz");
+    c->cd(2)->cd(5)->SetLogy();
+    hRecoMass->Draw();
+    if (isBg){
+      c->SaveAs("overviewBg.pdf");
+    } else {
+      c->SaveAs(Form("overviewM%2.2fGeV.pdf",d.mass));
+    }
+    c=new TCanvas(Form("c%d",nc),"canvas",600,400);
+    nc++;
+    c->cd(0)->SetLogy();
+    hRecoMassWide->Draw();
+    if (isBg){
+      hRecoMassWide->SaveAs("uncutMassSpectrumBg.hist.root");
+    } else {
+      hRecoMassWide->SaveAs(Form("uncutMassSpectrumM%2.2fGeV.hist.root",d.mass));
+      hRecoMass->SaveAs(Form("localMassSpectrumM%2.2fGeV.hist.root",d.mass));
+      
+    }
+
+ }
+
+
  if (0){ //plot the particle directions in the lab frame
     c=new TCanvas(Form("c%d",nc),"canvas",1200,800);
     nc++;
@@ -428,7 +564,7 @@ void ReadOtree(char *treefile){
       
  }
 
- if (0){ //plot the elastic scatter components in the fixed target frame
+ if (0){ //plot the elastic scatter quantities in the fixed target frame
     c=new TCanvas(Form("c%d",nc),"canvas",1200,400);
     nc++;
     c->Divide(5,1);
@@ -459,6 +595,40 @@ void ReadOtree(char *treefile){
     hCorrTemp->Draw("colz");
 	  
  }
+
+if (0){ //plot the A' mass with and without detector smearing:
+    c=new TCanvas(Form("c%d",nc),"canvas",1200,400);
+    nc++;
+    c->Divide(4,1);
+    c->cd(1)->SetLogy();
+    //hAmass->Fill(det.A->M(),w);
+    hPairMass->Draw("hist");
+    hRecoMass->SetLineColor(kRed);
+    hRecoMass->SetMarkerColor(kRed);
+    hRecoMass->Draw("same hist");
+    c->cd(2)->SetLogz();
+    hCompareMass->Draw("colz");
+    c->cd(3)->SetLogz();
+    hCompareRecoMass->Draw("colz");
+    c->cd(4)->SetLogz();
+    hRecoMassPosEta->Draw("colz");
+ }
+
+ if (0){ //plot the eta and pt differences due to smearing:
+    c=new TCanvas(Form("c%d",nc),"canvas",600,600);
+    nc++;
+    c->Divide(2,2);
+    c->cd(1)->SetLogz();
+    hLogDeltaEtaVsEta->Draw("colz");
+    c->cd(2)->SetLogz();
+    hLogDeltaPtVsEta->Draw("colz");
+    c->cd(3)->SetLogz();
+    hDeltaEtaVsEta->Draw("colz");
+    c->cd(4)->SetLogz();
+    hDeltaPtVsEta->Draw("colz");
+
+ }
+ 
 
  if (0){ //plot the particle directions in the fixed target frame
     c=new TCanvas(Form("c%d",nc),"canvas",1200,800);
