@@ -1,0 +1,18 @@
+setup                  = DL34symnoe
+beam_energy            = 0.034
+e-_angle               = 34
+e-_momentum            = 0.0155
+e-_acceptance_theta    = 0.0349
+e-_acceptance_phi      = 0.08727
+e-_acceptance_momentum = 0.2
+e+_angle               = -34
+e+_momentum            = 0.0155
+e+_acceptance_theta    = 0.0349
+e+_acceptance_phi      = 0.08727
+e+_acceptance_momentum = 0.2
+max_theta              =  70
+range_mass             = 0.000 0.034
+range_energy           =   0.00   0.022
+range_decay_phi        = 00 360
+range_decay_theta      = 0 140
+noe

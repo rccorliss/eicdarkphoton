@@ -1,0 +1,17 @@
+setup                  = DL45test
+beam_energy            = 0.045
+e+_angle               = -33.5
+e+_momentum            = 0.015
+e+_acceptance_theta    = 0.0349
+e+_acceptance_phi      = 0.08727
+e+_acceptance_momentum = 0.2
+e-_angle               = 16
+e-_momentum            = 0.028
+e-_acceptance_theta    = 0.0349
+e-_acceptance_phi      = 0.08727
+e-_acceptance_momentum = 0.2
+max_theta              =  15
+range_mass             = 0.012 0.02
+range_energy           =   0.00   0.013
+range_decay_phi        = 150 200
+range_decay_theta      = 100 120

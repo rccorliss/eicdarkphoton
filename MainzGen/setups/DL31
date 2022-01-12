@@ -1,0 +1,17 @@
+setup                  = DL31
+beam_energy            = 0.031
+e-_angle               = 51
+e-_momentum            = 0.0115
+e-_acceptance_theta    = 100.0349
+e-_acceptance_phi      = 100.08727
+e-_acceptance_momentum = 100.2
+e+_angle               = -23
+e+_momentum            = 0.0175
+e+_acceptance_theta    = 0.0349
+e+_acceptance_phi      = 0.08727
+e+_acceptance_momentum = 0.2
+max_theta              =  40
+range_mass             = 0.00 0.045
+range_energy           =   0.00   0.02
+range_decay_phi        = 0 360
+range_decay_theta      = 0 180

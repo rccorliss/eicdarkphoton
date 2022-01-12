@@ -1,0 +1,18 @@
+setup                  = DL45noe
+beam_energy            = 0.045
+e-_angle               = 33.5
+e-_momentum            = 0.015
+e-_acceptance_theta    = 0.0349
+e-_acceptance_phi      = 0.08727
+e-_acceptance_momentum = 0.2
+e+_angle               = -16
+e+_momentum            = 0.028
+e+_acceptance_theta    = 0.0349
+e+_acceptance_phi      = 0.08727
+e+_acceptance_momentum = 0.2
+max_theta              =  40
+range_mass             = 0.0 0.03
+range_energy           =   0.00   0.025
+range_decay_phi        = 0 360
+range_decay_theta      = 0 120
+noe

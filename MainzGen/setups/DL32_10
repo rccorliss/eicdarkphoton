@@ -1,0 +1,17 @@
+setup                  = DL32_10
+beam_energy            = 0.032
+e-_angle               = 22.5
+e-_momentum            = 0.013
+e-_acceptance_theta    = 0.0349
+e-_acceptance_phi      = 0.08727
+e-_acceptance_momentum = 0.2
+e+_angle               = -16.5
+e+_momentum            = 0.017
+e+_acceptance_theta    = 0.0349
+e+_acceptance_phi      = 0.08727
+e+_acceptance_momentum = 0.2
+max_theta              =  10
+range_mass             = 0.005 0.015
+range_energy           =   0.00   0.009
+range_decay_phi        = 160 200
+range_decay_theta      = 70 95 

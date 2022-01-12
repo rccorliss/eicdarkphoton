@@ -1,0 +1,18 @@
+setup                  = DL34modnoe
+beam_energy            = 0.034
+e-_angle               = 63
+e-_momentum            = 0.0080
+e-_acceptance_theta    = 0.0349
+e-_acceptance_phi      = 0.08727
+e-_acceptance_momentum = 0.2
+e+_angle               = -15
+e+_momentum            = 0.0225
+e+_acceptance_theta    = 0.0349
+e+_acceptance_phi      = 0.08727
+e+_acceptance_momentum = 0.2
+max_theta              =   20
+range_mass             = 0.000 0.024
+range_energy           =   0.00   0.02
+range_decay_phi        = 0 360
+range_decay_theta      = 0 180
+noe
