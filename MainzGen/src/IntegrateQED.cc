@@ -23,7 +23,7 @@ double E0, Eion,
 double events, allevents, accepted = 0;
 double sum = 0;
 
-const int nHists=13;
+const int nHists=16;
 Hist *id[nHists];
 
 void *integrationpart(void *seed)
@@ -186,9 +186,10 @@ const FourVector
     if (isnan(weight)) 
       cout << "WARNING: "<<setprecision(10)<<weight<<" "<<thetae<<" "<<phie<<endl;
     {
-      outfile<<m<<","<<weight<<","<<e1out_coll[0]<<","<<e1out_coll[1]<<","<<e1out_coll[2]<<","<<e1out_coll[3]
+      if (0){
+       outfile<<m<<","<<weight<<","<<e1out_coll[0]<<","<<e1out_coll[1]<<","<<e1out_coll[2]<<","<<e1out_coll[3]
 	     <<","<<e2out_coll[0]<<","<<e2out_coll[1]<<","<<e2out_coll[2]<<","<<e2out_coll[3]<<"\n";//<<","<<
-
+      }
       static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
       pthread_mutex_lock(&mutex); // filling shared histograms must be locked!
 
@@ -205,6 +206,9 @@ const FourVector
       id[10]->fill(100*(e2out.momentum()-spec2mom)/spec2mom, weight);
       id[11]->fill(100*(e1out.momentum()-spec1mom)/spec1mom, weight);
       id[12]->fill(e1out_coll.momentum(),weight);
+      id[13]->fill(e1out_coll.momentum(),weight);
+      id[14]->fill(e1out_coll.momentum(),1);
+      id[15]->fill(log10(weight),1.);
       sum += weight;
 
       if (!fmod(++accepted,1000)) 
@@ -318,6 +322,9 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[10]= new Hist("Positron Momentum","{/Symbol D}p_e", "","%","",100,-25,25);
   id[11]= new Hist("Electron Momentum","{/Symbol D}p_e", "","%","",100,-25,25);
   id[12]= new Hist("Spectator Momentum (collider frame)","E", "","GeV","",100,0,E0);
+  id[13]= new Hist("Spectator Momentum (collider frame) (weight)","E", "","GeV","",100,0,Eion);
+  id[14]= new Hist("Spectator Momentum (collider frame) (neve, not weight)","E", "","GeV","",100,0,Eion);
+  id[15]= new Hist("Event weight","log10(w)", "","","",100,-10,1);
 
   // start threads
 
