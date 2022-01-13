@@ -114,8 +114,8 @@ public:
   /// Angle between third component and Momentum 
   inline double theta() const {
        // original handles small angles poorly:
-    //double mom = abs(); return mom == 0 ? 0 : acos(p[2] / mom); }
-    double sq=square(); return sq==0? 0: atan2(sqrt(sq-p[2]*p[2]),p[2]);
+    //double mom = abs(); return mom == 0 ? 0 : acos(p[2] / mom); 
+    double sq=square(); return sq==0? 0: atan2(sqrt(sq-p[2]*p[2]),p[2]); }
   /// Polar angle between x component and Momentum around z-axis 
   inline double phi() const {
     return p[0] == 0 && p[1] == 0 ? 0 : atan2(p[1], p[0]); }
