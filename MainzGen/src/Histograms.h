@@ -78,7 +78,8 @@ public:
     if (unitx[0]) out << " [" << unitx << "]";
     out   << "'\nset ylabel '" << labely;
     if (unity[0]) out << " [" << unity << "]";
-    out   << "'\nset title '" << title << "' font 'Helvetica,14'"<<"\n";
+    out   << "'\nset title '" << title << "'\n";
+    out << "set title font ',24'"<<"\n";
     
     if (ny)
       out <<"set style data image" <<endl
