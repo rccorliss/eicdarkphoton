@@ -309,6 +309,9 @@ int main(int argc, char * argv[])
   
   // initialize histograms  
 
+
+  const double minLogAngle=-3, maxLogAngle=1,
+    minLogWeight=-20, maxLogWeight=10
   //  id[ 0]= new Hist("Dark Photon Mass", "m_{{/Symbol g}''}", "", 
   //		   "GeV", "{/Symbol m}b", (int) ((maxm-minm)/0.0005), minm, maxm);
 id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "", 
@@ -336,29 +339,29 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[12]= new Hist("Spectator Momentum (collider frame)","E", "","GeV","",100,0,E0);
   id[13]= new Hist("e1 Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,2, 100, -30, 5);  
+		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);  
   id[14]= new Hist("e2 Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,2, 100, -30, 5);  
-  id[15]= new Hist("Event weight","log10(w)", "","","",100,-30,5);
+		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);  
+  id[15]= new Hist("Event weight","log10(w)", "","","",100,minLogWeight,5);
   id[16]= new Hist("Spectator Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,2, 100, -30, 5);
+		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);
   id[17]= new Hist("Aprime mass vs Event Weight","log(mass)","log10(weight)",
 	       "","log(GeV)","log(mb)","",
-		   100, -5,2, 100, -30, 5);
+		   100, -5,2, 100, minLogWeight, maxLogWeight);
   id[18]= new Hist("qout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,2, 100, -30, 5);  
+		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);  
   id[19]= new Hist("qout-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,2, 100, -30, 5);  
+		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);  
   id[20]= new Hist("e1-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,2, 100, -30, 5);
+		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);
   id[21]= new Hist("e2-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,2, 100, -30, 5);  
+		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);  
 
   // start threads
   pthread_t thread[jobs];
