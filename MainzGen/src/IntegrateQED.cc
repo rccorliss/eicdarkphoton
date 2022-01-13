@@ -18,7 +18,7 @@ char   setupname[255];
 double E0, Eion,
   spec1, spec1mom, spec1thacc, spec1phiacc, spec1momacc,
   spec2, spec2mom, spec2thacc, spec2phiacc, spec2momacc,
-  minct, minctD, maxctD, minphiD, maxphiD, minE, maxE, minm, maxm;
+  minct, maxct, minctD, maxctD, minphiD, maxphiD, minE, maxE, minm, maxm;
 
 double maxctScatter,minctScatter,
   minScatterAngle,maxScatterAngle; //to subdivide a rapidly falling weight.
@@ -26,7 +26,7 @@ double maxctScatter,minctScatter,
 double events, allevents, accepted = 0;
 double sum = 0;
 
-const int nHists=23;
+const int nHists=24;
 Hist *id[nHists];
 
 void *integrationpart(void *seed)
@@ -112,9 +112,11 @@ const FourVector
   const double Solidangle = 1/allevents 
     * (maxE-minE)                // dE
     * (maxm-minm)                // dm
-    * (1-minct)*2*M_PI           // d\Omega
+    * (maxct-minct)*2*M_PI           // d\Omega
     * 4 * M_PI                   // d\Omega_e
     * (maxctD-minctD) * (maxphiD-minphiD);// d\Omega_Decay
+
+  //originally 'maxct' above was 1
 
   bool scatteringAngleRangeSmall=(maxctScatter-minctScatter)<1e-11;
 
@@ -168,7 +170,7 @@ const FourVector
     if (!spectrometer_mode) e_out_coll=e_out.Lorentz(p_in_coll);
 
     //determine the direction of the dark/virtual photon in the center of mass frame
-    double theta      = acos(minct+rndm[2]*(1-minct));
+    double theta      = acos(minct+rndm[2]*(maxct-minct)); //previously max was hardcoded to 1
     double phi        = rndm[3]*2*M_PI-M_PI;
 
     //determine the direction of the decay positron in the dark/virtual photon frame
@@ -275,7 +277,8 @@ const FourVector
       id[20]->fill2d(log10(angle(e1out,e_out)/deg),log10(weight),1.);
       id[21]->fill2d(log10(angle(e2out,e_out)/deg),log10(weight),1.);
       id[22]->fill2d(log10(thetae/deg),rndm[4],1.);
-      sum += weight;
+       id[23]->fill2d(log10(e_out[0]),log10(weight),1.);
+     sum += weight;
 
       if (!fmod(++accepted,1000)) 
       	cout << fixed<< setprecision(0)<<"\r"<<accepted<<"/" << i << flush;
@@ -321,7 +324,9 @@ int main(int argc, char * argv[])
     default: cerr << "Usage: "<<argv[0]<< " events setup\n";exit(-1);
     }
   }
-  
+
+
+  maxct=0;//default the to angle 0 degrees.  We'll turn it into a costheta later, if it's not overwritten.
   // read parameter file
   if (!filename) {cerr << "No input file given!" << endl; exit(-1);}
   ifstream in(filename);
@@ -342,6 +347,7 @@ int main(int argc, char * argv[])
     if (!strcmp(token, "e+_acceptance_phi"))      in >> spec1phiacc;
     if (!strcmp(token, "e+_acceptance_theta"))    in >> spec1thacc;
     if (!strcmp(token, "e+_acceptance_momentum")) in >> spec1momacc;
+    if (!strcmp(token, "min_theta"))              in >> maxct;
     if (!strcmp(token, "max_theta"))              in >> minct;
     if (!strcmp(token, "range_mass"))             in >> minm >> maxm;
     if (!strcmp(token, "range_energy"))           in >> minE >> maxE;
@@ -361,6 +367,7 @@ int main(int argc, char * argv[])
   minctD  = cos(minctD * deg); // we only need the cosine for generator
   maxctD  = cos(maxctD * deg);
   minct   = cos(minct * deg);
+  maxct   = cos(maxct * deg);
 
   events = floor(events/jobs); // events per thread
   allevents = events*jobs;     // and the sum of all events
@@ -404,7 +411,7 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[15]= new Hist("Event weight","log10(w)", "","","",100,minLogWeight,5);
   id[16]= new Hist("Spectator Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, -8,-5, 100, minLogWeight, maxLogWeight);
+		  100, -8,3, 100, minLogWeight, maxLogWeight);
   id[17]= new Hist("Aprime mass vs Event Weight","log(mass)","log10(weight)",
 	       "","log(GeV)","log(mb)","",
 		   100, -5,2, 100, minLogWeight, maxLogWeight);
@@ -423,13 +430,16 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[22]= new Hist("log scattering angle vs rndm[4] (are we able to generate a dist?)","log10(th)","rndm[4]",
 	       "","","","",
 		   100, -10,1, 100, -1, 2.);  
+  id[23]= new Hist("Spectator Energy (fixed target frame) vs Event Weight","log10(E)","log10(weight)",
+	       "","log(GeV)","log(mb)","",
+		  100, -4,4, 100, minLogWeight, maxLogWeight);
 
   // start threads
   pthread_t thread[jobs];
   int seed[jobs];
 
 
-  int nScatterBins=1;
+  int nScatterBins=6;
   double scatterBin[]={1e-7,1e-6,1e-4,1e-2,1.,10.,180.};
   for (int j=0;j<nScatterBins;j++){
     minScatterAngle=scatterBin[j]*deg;
