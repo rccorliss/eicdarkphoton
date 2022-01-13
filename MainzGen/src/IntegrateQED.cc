@@ -311,7 +311,7 @@ int main(int argc, char * argv[])
 
 
   const double minLogAngle=-3, maxLogAngle=1,
-    minLogWeight=-20, maxLogWeight=10
+    minLogWeight=-20, maxLogWeight=10;
   //  id[ 0]= new Hist("Dark Photon Mass", "m_{{/Symbol g}''}", "", 
   //		   "GeV", "{/Symbol m}b", (int) ((maxm-minm)/0.0005), minm, maxm);
 id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "", 
@@ -346,7 +346,7 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[15]= new Hist("Event weight","log10(w)", "","","",100,minLogWeight,5);
   id[16]= new Hist("Spectator Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
-		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);
+		  100, -8,-5, 100, minLogWeight, maxLogWeight);
   id[17]= new Hist("Aprime mass vs Event Weight","log(mass)","log10(weight)",
 	       "","log(GeV)","log(mb)","",
 		   100, -5,2, 100, minLogWeight, maxLogWeight);
