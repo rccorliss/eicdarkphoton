@@ -47,25 +47,45 @@ const FourVector
    e_in=e_in_coll.Lorentz(-p_in_coll),
    p_in=p_in_coll.Lorentz(-p_in_coll);
 
- printf("sanity check: p_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in_coll[0],p_in_coll[1],p_in_coll[2],p_in_coll[3]);
- printf("sanity check: e_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_in_coll[0],e_in_coll[1],e_in_coll[2],e_in_coll[3]);
- printf("sanity check: p_in=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in[0],p_in[1],p_in[2],p_in[3]);
- printf("sanity check: e_in=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_in[0],e_in[1],e_in[2],e_in[3]);
+ if (seed==0){
+   printf("sanity check: p_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in_coll[0],p_in_coll[1],p_in_coll[2],p_in_coll[3]);
+   printf("sanity check: e_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_in_coll[0],e_in_coll[1],e_in_coll[2],e_in_coll[3]);
+   printf("sanity check: p_in=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in[0],p_in[1],p_in[2],p_in[3]);
+   printf("sanity check: e_in=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_in[0],e_in[1],e_in[2],e_in[3]);
 
+   FourVector specBounds[4];
+   specBounds[0]=FourVector(0,sin(spec1-spec1thacc),0,cos(spec1-spec1thacc));
+   specBounds[1]=FourVector(0,sin(spec1+spec1thacc),0,cos(spec1+spec1thacc));
+   specBounds[2]=FourVector(0,sin(spec2-spec2thacc),0,cos(spec2-spec2thacc));
+   specBounds[3]=FourVector(0,sin(spec2+spec2thacc),0,cos(spec2+spec2thacc));
+
+   printf("spectrometer bounds:\n");
+   printf(" (collider) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
+	  specBounds[0].theta()/deg,specBounds[1].theta()/deg,
+	  specBounds[2].theta()/deg,specBounds[3].theta()/deg);
+   for (int i=0;i<4;i++){
+     specBounds[i].Lorentz(-p_in_coll);
+   }
+  printf(" (fixedtar) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
+	  specBounds[0].theta()/deg,specBounds[1].theta()/deg,
+	  specBounds[2].theta()/deg,specBounds[3].theta()/deg);   
+ }
+
+ 
 
  bool spectrometer_mode=true;
  if (Eion>=m_heavytarget) spectrometer_mode=false;
 
  if (spectrometer_mode){
-   printf("in spectrometer_mode  (mass=%2.1E>Eion=%2.1E)\n",m_heavytarget,Eion);
+   if (seed==0) printf("in spectrometer_mode  (mass=%2.1E>Eion=%2.1E)\n",m_heavytarget,Eion);
 
  }
  if (!spectrometer_mode){
-   printf("in !spectrometer_mode  (mass=%2.1E<Eion=%2.1E)\n",m_heavytarget,Eion);
+   if (seed==0) printf("in !spectrometer_mode  (mass=%2.1E<Eion=%2.1E)\n",m_heavytarget,Eion);
     //because we are in a boosted frame, our energy bounds can't really be imported from the setup file without more consideration.  They need to be the CM energies.
    maxE=e_in[0];
    minE=m_electron;
-   printf("scattered electron bounds in fixed target frame are %.2E < E < %.2E\n",minE,maxE);
+   if (seed==0) printf("scattered electron bounds in fixed target frame are %.2E < E < %.2E\n",minE,maxE);
  }
 //before my meddling:
 // const FourVector 

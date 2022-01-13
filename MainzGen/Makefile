@@ -3,7 +3,7 @@ SETUPS = EIC250x5
 #DL45 DL32  DL45sym
 
 JOBS = 4
-EVENTS=1e6
+EVENTS=1e7
 
 all : 	src/IntegrateQED $(SETUPS:%=Integration_%.pdf)  $(SETUPS:%=Signal_%.pdf) 
 
