@@ -18,12 +18,14 @@ char   setupname[255];
 double E0, Eion,
   spec1, spec1mom, spec1thacc, spec1phiacc, spec1momacc,
   spec2, spec2mom, spec2thacc, spec2phiacc, spec2momacc,
-  minct, minctD, maxctD, minphiD, maxphiD, minE, maxE, minm, maxm;   
+  minct, minctD, maxctD, minphiD, maxphiD, minE, maxE, minm, maxm;
+
+double maxctScatter,minctScatter; //to subdivide a rapidly falling weight.
 
 double events, allevents, accepted = 0;
 double sum = 0;
 
-const int nHists=16;
+const int nHists=21;
 Hist *id[nHists];
 
 void *integrationpart(void *seed)
@@ -99,11 +101,11 @@ const FourVector
     double m          = minm + rndm[1]*(maxm-minm); //select a mass for the virtual (or dark) photon
     if (m < 2*lepton) {nfail[0]++;continue;} //if the mass is below the decay lepton mass, veto
 
-    double E          = minE + rndm[0]*(maxE-minE); //select a total energy for the electron
+    double E          = minE + rndm[0]*(maxE-minE); //select a total energy for the electron in the fixed target frame
     if (E<m_electron)  {nfail[1]++;continue;} //skip if the electron total energy is below the electron mass.  (daughter mass, or is this the spectator?)
 
     //determine the direction of the scattered spectator electron in the fixed target frame
-    double thetae     = acos(rndm[4] *2-1); //theta between forward and max allowed
+    double thetae     = acos(minctScatter + rndm[4] *(maxctScatter-minctScatter)); //theta between forward and max allowed
     double phie       = rndm[5]*2*M_PI; //phi between zero and 2pi
     e_out = Polar(E,momentum(E,m_electron), thetae, phie);
     if (!spectrometer_mode) e_out_coll=e_out.Lorentz(p_in_coll);
@@ -205,10 +207,15 @@ const FourVector
       id[ 9]->fill2d(e2out.theta()/deg, e2out.varPhi()/deg, weight);
       id[10]->fill(100*(e2out.momentum()-spec2mom)/spec2mom, weight);
       id[11]->fill(100*(e1out.momentum()-spec1mom)/spec1mom, weight);
-      id[12]->fill(e1out_coll.momentum(),weight);
-      id[13]->fill(e1out_coll.momentum(),weight);
-      id[14]->fill(e1out_coll.momentum(),1);
+      id[12]->fill(e_out_coll.momentum(),weight);
+      id[13]->fill2d(log10(e1out.theta()/deg),log10(weight),1.);
+      id[14]->fill2d(log10(e2out.theta()/deg),log10(weight),1.);
       id[15]->fill(log10(weight),1.);
+      id[16]->fill2d(log10(e_out.theta()/deg),log10(weight),1.);
+      id[17]->fill2d(log10(m),log10(weight),1.);
+      id[18]->fill2d(log10(q_out.theta()/deg),log10(weight),1.);
+      id[19]->fill2d(log10(angle(q_out,e_out)/deg),log10(weight),1.);
+      id[20]->fill2d(log10(angle(e1out,e_out)/deg),log10(weight),1.);
       sum += weight;
 
       if (!fmod(++accepted,1000)) 
@@ -285,8 +292,12 @@ int main(int argc, char * argv[])
   in.close();
 
   spec1   *= deg;              // convert to radian
+  spec1phiacc   *= deg;              // convert to radian
+  spec1thacc   *= deg;              // convert to radian
   spec2   *= deg;              // convert to radian
-  minphiD *= deg;              // convert to radian
+  spec2phiacc   *= deg;              // convert to radian
+  spec2thacc   *= deg;              // convert to radian
+   minphiD *= deg;              // convert to radian
   maxphiD *= deg;              // convert to radian
   minctD  = cos(minctD * deg); // we only need the cosine for generator
   maxctD  = cos(maxctD * deg);
@@ -322,21 +333,46 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[10]= new Hist("Positron Momentum","{/Symbol D}p_e", "","%","",100,-25,25);
   id[11]= new Hist("Electron Momentum","{/Symbol D}p_e", "","%","",100,-25,25);
   id[12]= new Hist("Spectator Momentum (collider frame)","E", "","GeV","",100,0,E0);
-  id[13]= new Hist("Spectator Momentum (collider frame) (weight)","E", "","GeV","",100,0,Eion);
-  id[14]= new Hist("Spectator Momentum (collider frame) (neve, not weight)","E", "","GeV","",100,0,Eion);
-  id[15]= new Hist("Event weight","log10(w)", "","","",100,-10,1);
+  id[13]= new Hist("e1 Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
+	       "","log(deg.)","log(mb)","",
+		  100, -8,2, 100, -30, 5);  
+  id[14]= new Hist("e2 Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
+	       "","log(deg.)","log(mb)","",
+		  100, -8,2, 100, -30, 5);  
+  id[15]= new Hist("Event weight","log10(w)", "","","",100,-30,5);
+  id[16]= new Hist("Spectator Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
+	       "","log(deg.)","log(mb)","",
+		  100, -8,2, 100, -30, 5);
+  id[17]= new Hist("Aprime mass vs Event Weight","log(mass)","log10(weight)",
+	       "","log(GeV)","log(mb)","",
+		   100, -5,2, 100, -30, 5);
+  id[18]= new Hist("qout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
+	       "","log(deg.)","log(mb)","",
+		  100, -8,2, 100, -30, 5);  
+  id[19]= new Hist("qout-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
+	       "","log(deg.)","log(mb)","",
+		  100, -8,2, 100, -30, 5);  
+  id[20]= new Hist("e1-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
+	       "","log(deg.)","log(mb)","",
+		  100, -8,2, 100, -30, 5);  
 
   // start threads
-
   pthread_t thread[jobs];
   int seed[jobs];
-  for (int i=0;i<jobs;i++) {
-    seed[i]=i;
-    pthread_create(&thread[i], NULL, integrationpart, (void*) &seed[i]);
-  }
-  for (int i=0;i<jobs;i++) pthread_join(thread[i],NULL);
-  cout << "Sum: " << fixed<< setprecision(30)<<sum<<endl;
 
+
+  int nScatterBins=1;
+  double scatterBin[]={1e-7,1e-6,1e-4,1e-2,1.,10.,180.};
+  for (int j=0;j<nScatterBins;j++){
+    maxctScatter=cos(scatterBin[j]*deg);
+    minctScatter=cos(scatterBin[j+1]*deg);
+      for (int i=0;i<jobs;i++) {
+	seed[i]=i;
+	pthread_create(&thread[i], NULL, integrationpart, (void*) &seed[i]);
+      }
+    for (int i=0;i<jobs;i++) pthread_join(thread[i],NULL);
+    cout << "Sum: " << fixed<< setprecision(30)<<sum<<endl;
+  }
   // output histograms
 
   char fn1[255],fn2[255];
