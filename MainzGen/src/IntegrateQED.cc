@@ -25,7 +25,7 @@ double maxctScatter,minctScatter; //to subdivide a rapidly falling weight.
 double events, allevents, accepted = 0;
 double sum = 0;
 
-const int nHists=21;
+const int nHists=22;
 Hist *id[nHists];
 
 void *integrationpart(void *seed)
@@ -216,6 +216,7 @@ const FourVector
       id[18]->fill2d(log10(q_out.theta()/deg),log10(weight),1.);
       id[19]->fill2d(log10(angle(q_out,e_out)/deg),log10(weight),1.);
       id[20]->fill2d(log10(angle(e1out,e_out)/deg),log10(weight),1.);
+      id[20]->fill2d(log10(angle(e2out,e_out)/deg),log10(weight),1.);
       sum += weight;
 
       if (!fmod(++accepted,1000)) 
@@ -353,6 +354,9 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
 	       "","log(deg.)","log(mb)","",
 		  100, -8,2, 100, -30, 5);  
   id[20]= new Hist("e1-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
+	       "","log(deg.)","log(mb)","",
+		  100, -8,2, 100, -30, 5);
+  id[20]= new Hist("e2-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
 		  100, -8,2, 100, -30, 5);  
 
