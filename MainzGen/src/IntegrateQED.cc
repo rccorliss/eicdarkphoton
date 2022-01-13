@@ -20,12 +20,13 @@ double E0, Eion,
   spec2, spec2mom, spec2thacc, spec2phiacc, spec2momacc,
   minct, minctD, maxctD, minphiD, maxphiD, minE, maxE, minm, maxm;
 
-double maxctScatter,minctScatter; //to subdivide a rapidly falling weight.
+double maxctScatter,minctScatter,
+  minScatterAngle,maxScatterAngle; //to subdivide a rapidly falling weight.
 
 double events, allevents, accepted = 0;
 double sum = 0;
 
-const int nHists=22;
+const int nHists=23;
 Hist *id[nHists];
 
 void *integrationpart(void *seed)
@@ -36,6 +37,7 @@ void *integrationpart(void *seed)
   char outfilename[20];
   sprintf(outfilename,"part_%d.cvs",*(int *) seed);
   std::ofstream outfile(outfilename,std::ofstream::out);
+  bool talkingThread=( (*(int *) seed)==0); //only one thread has to do sanity checks.
 
 const FourVector
   e_in_coll=FourVector(E0,0,0,momentum(E0,m_electron)),
@@ -47,7 +49,7 @@ const FourVector
    e_in=e_in_coll.Lorentz(-p_in_coll),
    p_in=p_in_coll.Lorentz(-p_in_coll);
 
- if (seed==0){
+ if (talkingThread){
    printf("sanity check: p_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in_coll[0],p_in_coll[1],p_in_coll[2],p_in_coll[3]);
    printf("sanity check: e_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_in_coll[0],e_in_coll[1],e_in_coll[2],e_in_coll[3]);
    printf("sanity check: p_in=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in[0],p_in[1],p_in[2],p_in[3]);
@@ -59,16 +61,20 @@ const FourVector
    specBounds[2]=FourVector(0,sin(spec2-spec2thacc),0,cos(spec2-spec2thacc));
    specBounds[3]=FourVector(0,sin(spec2+spec2thacc),0,cos(spec2+spec2thacc));
 
+   Momentum m;
    printf("spectrometer bounds:\n");
    printf(" (collider) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
 	  specBounds[0].theta()/deg,specBounds[1].theta()/deg,
 	  specBounds[2].theta()/deg,specBounds[3].theta()/deg);
-   for (int i=0;i<4;i++){
-     specBounds[i].Lorentz(-p_in_coll);
-   }
+   double beta=p_in_coll.beta()[2];
+   double gamma=p_in_coll.gamma();
+   //angles for beta~1 particles transform as tan(th')=sin(th)/(gamma(cos(th)-beta):
+   // thetaprime=atan2(sin(specBounds[0].theta()),gamma*(cos(specBounds[0].theta())-beta));
   printf(" (fixedtar) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
-	  specBounds[0].theta()/deg,specBounds[1].theta()/deg,
-	  specBounds[2].theta()/deg,specBounds[3].theta()/deg);   
+	 atan2(sin(specBounds[0].theta()),gamma*(cos(specBounds[0].theta())-beta))/deg,
+	 atan2(sin(specBounds[1].theta()),gamma*(cos(specBounds[1].theta())-beta))/deg,
+	 atan2(sin(specBounds[2].theta()),gamma*(cos(specBounds[2].theta())-beta))/deg,
+	 atan2(sin(specBounds[3].theta()),gamma*(cos(specBounds[3].theta())-beta))/deg);
  }
 
  
@@ -77,15 +83,19 @@ const FourVector
  if (Eion>=m_heavytarget) spectrometer_mode=false;
 
  if (spectrometer_mode){
-   if (seed==0) printf("in spectrometer_mode  (mass=%2.1E>Eion=%2.1E)\n",m_heavytarget,Eion);
+   if (talkingThread) printf("in spectrometer_mode  (mass=%2.1E>Eion=%2.1E)\n",m_heavytarget,Eion);
 
  }
  if (!spectrometer_mode){
-   if (seed==0) printf("in !spectrometer_mode  (mass=%2.1E<Eion=%2.1E)\n",m_heavytarget,Eion);
+   if (talkingThread) printf("in !spectrometer_mode  (mass=%2.1E<Eion=%2.1E)\n",m_heavytarget,Eion);
     //because we are in a boosted frame, our energy bounds can't really be imported from the setup file without more consideration.  They need to be the CM energies.
    maxE=e_in[0];
    minE=m_electron;
-   if (seed==0) printf("scattered electron bounds in fixed target frame are %.2E < E < %.2E\n",minE,maxE);
+   if (talkingThread) printf("scattered electron bounds in fixed target frame are %.2E < E < %.2E\n",minE,maxE);
+   if (talkingThread) {
+     printf("scattered electron theta bounds in fixed target frame are %f < cos(th) < %f\n",minctScatter,maxctScatter);
+     printf("scattered electron theta bounds in fixed target frame are %E > 1-cos(th) > %E\n",1.-minctScatter,1.-maxctScatter);
+   }
  }
 //before my meddling:
 // const FourVector 
@@ -106,12 +116,16 @@ const FourVector
     * 4 * M_PI                   // d\Omega_e
     * (maxctD-minctD) * (maxphiD-minphiD);// d\Omega_Decay
 
+  bool scatteringAngleRangeSmall=(maxctScatter-minctScatter)<1e-11;
 
+  double minScatterAngleSq=pow(minScatterAngle,2)/2.;
+  double maxScatterAngleSq=pow(maxScatterAngle,2)/2.;
+  if (scatteringAngleRangeSmall & talkingThread){
+    printf("Scattering Range is very small! \n If the scattering bounds %E(rad) and %E(rad) are not both small, consider selecting a different range.\n >>>>  Using cos(x)=1-x^2/2 expansion...\n",minScatterAngle,maxScatterAngle);
+  }
+ 
   
   double nfail[9]={0.,0.,0.,0.,0.,0.,0.,0.,0.};
-
-
-  printf("beginning events\n");
   
   for (double i=1;i<=events;i++) {
     
@@ -125,7 +139,30 @@ const FourVector
     if (E<m_electron)  {nfail[1]++;continue;} //skip if the electron total energy is below the electron mass.  (daughter mass, or is this the spectator?)
 
     //determine the direction of the scattered spectator electron in the fixed target frame
-    double thetae     = acos(minctScatter + rndm[4] *(maxctScatter-minctScatter)); //theta between forward and max allowed
+    double cosThetaScatter=0;
+    double thetae=0;
+    if (scatteringAngleRangeSmall){
+      //if small, then costh terms will be close to 1.0.  Use cos(x)~1-x^2/2:
+      //     cosThetaScatter =minctScatter + rndm[4] *(maxctScatter-minctScatter);
+      //     cosThetaScatter-1 =minctScatter-1 + rndm[4] *(maxctScatter-minctScatter);
+      //     cosThetaScatter-1 =minctScatter-1 + rndm[4] *(maxctScatter+(1-1)-minctScatter);
+      //     cosThetaScatter-1 =minctScatter-1 + rndm[4] *( (maxctScatter-1)-(minctScatter-1) );
+      //     -th^2/2=-thmax^2/2+rndm*(-thmin^2/2-(-thmax^2/2) );
+      //     th=sqrt(thmax^2+rndm*(thmin^2-thmax^2);
+      thetae=sqrt(maxScatterAngleSq+rndm[4] *(minScatterAngleSq-maxScatterAngleSq));
+      cosThetaScatter=cos(thetae);
+      if (log10(thetae/deg)<-10.) {
+	printf("log theta <-10:  log=%E, theta=%E maxSQ=%E, minSQ=%E, (minSQ-maxSQ)=%E, rnd=%E)\n",
+					 log10(thetae/deg),thetae,maxScatterAngleSq,minScatterAngleSq,
+					 (minScatterAngleSq-maxScatterAngleSq),rndm[4]);
+	exit(-1);
+      }
+    }else{
+      //generate flat in cosTheta and compute the acos to get the scatter angle:
+     cosThetaScatter =minctScatter + rndm[4] *(maxctScatter-minctScatter);
+      thetae     = acos(cosThetaScatter); //theta between forward and max allowed
+    }
+    
     double phie       = rndm[5]*2*M_PI; //phi between zero and 2pi
     e_out = Polar(E,momentum(E,m_electron), thetae, phie);
     if (!spectrometer_mode) e_out_coll=e_out.Lorentz(p_in_coll);
@@ -237,6 +274,7 @@ const FourVector
       id[19]->fill2d(log10(angle(q_out,e_out)/deg),log10(weight),1.);
       id[20]->fill2d(log10(angle(e1out,e_out)/deg),log10(weight),1.);
       id[21]->fill2d(log10(angle(e2out,e_out)/deg),log10(weight),1.);
+      id[22]->fill2d(log10(thetae/deg),rndm[4],1.);
       sum += weight;
 
       if (!fmod(++accepted,1000)) 
@@ -253,7 +291,7 @@ const FourVector
   cout <<"\n";
   return 0;
   outfile.close();
-}
+ }
 
 int main(int argc, char * argv[])
 {
@@ -382,6 +420,9 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[21]= new Hist("e2-eout Angle (fixed target frame) vs Event Weight","log(theta)","log10(weight)",
 	       "","log(deg.)","log(mb)","",
 		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);  
+  id[22]= new Hist("log scattering angle vs rndm[4] (are we able to generate a dist?)","log10(th)","rndm[4]",
+	       "","","","",
+		   100, -10,1, 100, -1, 2.);  
 
   // start threads
   pthread_t thread[jobs];
@@ -391,8 +432,13 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   int nScatterBins=1;
   double scatterBin[]={1e-7,1e-6,1e-4,1e-2,1.,10.,180.};
   for (int j=0;j<nScatterBins;j++){
+    minScatterAngle=scatterBin[j]*deg;
+    maxScatterAngle=scatterBin[j+1]*deg;
     maxctScatter=cos(scatterBin[j]*deg);
     minctScatter=cos(scatterBin[j+1]*deg);
+    if (maxctScatter==minctScatter){
+      printf("range indistinguishable.  exiting.\n"); exit(-1);
+    }
       for (int i=0;i<jobs;i++) {
 	seed[i]=i;
 	pthread_create(&thread[i], NULL, integrationpart, (void*) &seed[i]);
