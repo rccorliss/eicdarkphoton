@@ -113,9 +113,9 @@ public:
     return sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]); }
   /// Angle between third component and Momentum 
   inline long double theta() const {
-       // original handles small angles poorly:
-    //long double mom = abs(); return mom == 0 ? 0 : acos(p[2] / mom); 
-    long double sq=square(); return sq==0? 0: atan2(sqrt(sq-p[2]*p[2]),p[2]); }
+       // cos handles small angles poorly, but with long double precision, should be okay:
+    long double mom = abs(); return mom == 0 ? 0 : acos(p[2] / mom); }
+    //long double sq=square(); return sq==0? 0: atan2(sqrt(sq-p[2]*p[2]),p[2]); }
   /// Polar angle between x component and Momentum around z-axis 
   inline long double phi() const {
     return p[0] == 0 && p[1] == 0 ? 0 : atan2(p[1], p[0]); }
@@ -161,7 +161,7 @@ public:
   friend std::ostream& operator<<(std::ostream&, Momentum);
   /// Angle between two vectors
   friend long double angle(const Momentum &, const Momentum &);
-};
+  };
 
 /** This class represents a relativistic four vector.
  *  The three momentum arithmetics are inherited form Momentum,

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <fstream>
 #include <cstring>
+#include <random>
 #include <pthread.h>
 #include <unistd.h>
 #include "FourVector.h"
@@ -9,6 +10,10 @@
 #include "QEDCalculation.h"
 
 using namespace std;
+
+//generator used for smearing only:
+std::default_random_engine randgen(1.); //prime it with a fixed seed of 1. for reproducibility.
+std::normal_distribution<float> gaus(0,1); //mean zero, width of 1.
 
 long double m_heavytarget = 168.514728;      //Ta181
 const long double m_electron    = 0.000510998928;
@@ -26,8 +31,63 @@ long double maxctScatter,minctScatter,
 long double events, allevents, accepted = 0;
 long double sum = 0;
 
-const int nHists=26;
+const int nHists=27;
 Hist *id[nHists];
+
+FourVector smear(const FourVector &x)
+{//take in a four vector and smear it with random values.
+  //NOTE:  here we don't want quasi-random numbers from sobol, since those are designed to be ~evenly spaced.
+  FourVector smeared=FourVector(0,0,0,0);
+
+  if (x.abs()==0) return x; //can't smear a zero.
+  //use the handbook detector to smear the momentum vector.  WE assume this always washes out the mass of the particle, so we make it massless.
+
+  //components as useful:
+  float theta=(float)x.theta();
+  float phi=(float)x.phi();
+  // don't need:  float ene=(float)x.energy();
+  float mom=(float)x.momentum();
+  float momSqr=(float)x.momentumSqr();
+  float eta=-log(tan(theta/2.)); // we don't need long double precision here, so snuff it early.
+
+  if (eta<-4.5 || eta>4.5){
+    //no tracking or cal.  return a zero vector to indicate the particle was lost.
+    
+    printf("Particle lost!  This should have triggered the earlier cuts!\n");
+    printf("eta=%f, theta=%f\n",eta,theta);
+    exit(-2);
+    return smeared;
+  }
+  smeared=x;
+ 
+  float momshift=0,phishift=0,thetashift=0;
+  //smear all angles, but only smear the energy/momentum if we don't have tracking:
+  if (eta<-3.5){   //EMcal Zone: -- should this override the tracking as well?
+    momshift=gaus(randgen)*sqrt( 4e-4*momSqr+1e-4*mom ); //sqrt( pow(0.02*mom.Mag(),2)+pow(0.01,2)*mom.Mag()
+    phishift=gaus(randgen)*0.001;
+    thetashift=gaus(randgen)*0.001;
+    //this applies to all angles, but tracking will do better, so only apply if outside of tracking.
+  } else if (eta <-2.5){//backward tracking
+    momshift=gaus(randgen)*sqrt( 1e-6*momSqr*momSqr+4e-4*momSqr);//sqrt(pow(0.001*mom.Mag2(),2)+pow(0.02*mom.Mag(),2));
+  } else if (eta <-1.0){//backward tracking
+    momshift=gaus(randgen)*sqrt( 2.5e-7*momSqr*momSqr+1e-4*momSqr);//sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.01*mom.Mag(),2))
+  } else if (eta <1.0){//mid tracking
+    momshift=gaus(randgen)*sqrt( 2.5e-7*momSqr*momSqr+2.5e-5*momSqr);//sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.005*mom.Mag(),2))
+  } else if (eta <2.5){//forward tracking
+    momshift=gaus(randgen)*sqrt( 2.5e-7*momSqr*momSqr+1e-4*momSqr);//sqrt(pow(0.0005*mom.Mag2(),2)+pow(0.01*mom.Mag(),2))));
+  } else if (eta <3.5){
+    momshift=gaus(randgen)*sqrt( 1e-6*momSqr*momSqr+4e-4*momSqr);//sqrt(pow(0.001*mom.Mag2(),2)+pow(0.02*mom.Mag(),2));
+  } else if (eta<4.5){    //EMcal Zone:  (see question above.)
+    momshift=gaus(randgen)*sqrt( 4e-4*momSqr+1e-4*mom ); //sqrt( pow(0.02*mom.Mag(),2)+pow(0.01,2)*mom.Mag()
+    phishift=gaus(randgen)*0.001;
+    thetashift=gaus(randgen)*0.001;
+     //this applies to all angles, but tracking will do better, so only apply if outside of tracking.
+  }
+
+  smeared=Polar(energy(mom+momshift,m_electron),mom+momshift, theta+thetashift, phi+phishift);
+
+  return smeared;
+}
 
 void *integrationpart(void *seed)
 {
@@ -63,14 +123,14 @@ const FourVector
 
    Momentum m;
    printf("spectrometer bounds:\n");
-   printf(" (collider) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
+   printf(" (collider) e-:  %.3LE<TH<%.3LE\t e+:  %.3LE<TH<%.3LE  (degrees)\n",
 	  specBounds[0].theta()/deg,specBounds[1].theta()/deg,
 	  specBounds[2].theta()/deg,specBounds[3].theta()/deg);
    long double beta=p_in_coll.beta()[2];
    long double gamma=p_in_coll.gamma();
    //angles for beta~1 particles transform as tan(th')=sin(th)/(gamma(cos(th)-beta):
    // thetaprime=atan2(sin(specBounds[0].theta()),gamma*(cos(specBounds[0].theta())-beta));
-  printf(" (fixedtar) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
+  printf(" (fixedtar) e-:  %.3LE<TH<%.3LE\t e+:  %.3LE<TH<%.3LE  (degrees)\n",
 	 atan2(sin(specBounds[0].theta()),gamma*(cos(specBounds[0].theta())-beta))/deg,
 	 atan2(sin(specBounds[1].theta()),gamma*(cos(specBounds[1].theta())-beta))/deg,
 	 atan2(sin(specBounds[2].theta()),gamma*(cos(specBounds[2].theta())-beta))/deg,
@@ -83,17 +143,17 @@ const FourVector
  if (Eion>=m_heavytarget) spectrometer_mode=false;
 
  if (spectrometer_mode){
-   if (talkingThread) printf("in spectrometer_mode  (mass=%2.1E>Eion=%2.1E)\n",m_heavytarget,Eion);
+   if (talkingThread) printf("in spectrometer_mode  (mass=%.1LE>Eion=%.1LE)\n",m_heavytarget,Eion);
 
  }
  if (!spectrometer_mode){
-   if (talkingThread) printf("in !spectrometer_mode  (mass=%2.1E<Eion=%2.1E)\n",m_heavytarget,Eion);
+   if (talkingThread) printf("in !spectrometer_mode  (mass=%.1LE<Eion=%.1LE)\n",m_heavytarget,Eion);
     //because we are in a boosted frame, our energy bounds can't really be imported from the setup file without more consideration.  They need to be the CM energies.
    maxE=e_in[0];
    minE=m_electron;
    if (talkingThread) printf("scattered electron bounds in fixed target frame are %.2LE < E < %.2LE\n",minE,maxE);
    if (talkingThread) {
-     printf("scattered electron theta bounds in fixed target frame are %f < cos(th) < %f\n",minctScatter,maxctScatter);
+     printf("scattered electron theta bounds in fixed target frame are %LE < cos(th) < %LE\n",minctScatter,maxctScatter);
      printf("scattered electron theta bounds in fixed target frame are %LE > 1-cos(th) > %LE\n",1.-minctScatter,1.-maxctScatter);
    }
  }
@@ -118,7 +178,7 @@ const FourVector
 
   //originally 'maxct' above was 1
 
-  bool scatteringAngleRangeSmall=(maxctScatter-minctScatter)<1e-11;
+  bool scatteringAngleRangeSmall=(maxctScatter-minctScatter)<1e-14;
 
   long double minScatterAngleSq=pow(minScatterAngle,2)/2.;
   long double maxScatterAngleSq=pow(maxScatterAngle,2)/2.;
@@ -153,8 +213,8 @@ const FourVector
       //     th=sqrt(thmax^2+rndm*(thmin^2-thmax^2);
       thetae=sqrt(maxScatterAngleSq+rndm[4] *(minScatterAngleSq-maxScatterAngleSq));
       cosThetaScatter=cos(thetae);
-      if (log10(thetae/deg)<-10.) {
-	printf("log theta <-10:  log=%LE, theta=%LE maxSQ=%LE, minSQ=%LE, (minSQ-maxSQ)=%LE, rnd=%LE)\n",
+      if (0 && log10(thetae/deg)<-10.) {
+	printf("log theta <-10:  log=%LE, theta=%LE maxSQ=%LE, minSQ=%LE, (minSQ-maxSQ)=%LE, rnd=%E)\n",
 					 log10(thetae/deg),thetae,maxScatterAngleSq,minScatterAngleSq,
 					 (minScatterAngleSq-maxScatterAngleSq),rndm[4]);
 	exit(-1);
@@ -199,47 +259,46 @@ const FourVector
     e1out = Polar(energy(lepton,peq), peq, 
 		  thetadecay, phidecay).Lorentz(q_out);
 
-    //if spectrometer, check spectrometer acceptance.  If not, require minimum momentum.
-    if (spectrometer_mode && fabs((e1out.momentum()-spec1mom)/spec1mom)>spec1momacc)  {nfail[3]++;continue;}
+
+    //generate detector frame quantities and check acceptance of e1:
+    //if spectrometer, check spectrometer acceptance.  If not, require minimum momentum and eta cut
+    if (spectrometer_mode){
+      if ( fabs((e1out.momentum()-spec1mom)/spec1mom)>spec1momacc)  {nfail[3]++;continue;}
+       e1spec = FourVector(e1out[0], e1out[1] * cos(spec1) - e1out[3]*sin(spec1),  
+			e1out[2], e1out[1] * sin(spec1) + e1out[3]*cos(spec1));
+       
+      if (fabs(atan2(e1spec[1],e1spec[3])) > spec2thacc)  {nfail[4]++;continue;}
+      if (fabs(atan2(e1spec[2],e1spec[3])) > spec2phiacc )  {nfail[5]++;continue;}
+    }
     if (!spectrometer_mode) {
       e1out_coll=e1out.Lorentz(p_in_coll);
-      if (e1out.momentum()<spec1mom){ //reject if momentum is too low.
-	nfail[3]++;continue;}
+      if (e1out_coll.momentum()<spec1mom){nfail[3]++;continue;}
+      if (fabs(e1out_coll.theta()-spec1)>spec1thacc) {nfail[4]++;continue;}
     }
     
     e2out = q_out-e1out;
-   //if spectrometer, check spectrometer acceptance.  If not, require minimum momentum.
-    if (spectrometer_mode && fabs((e2out.momentum()-spec2mom)/spec2mom)>spec2momacc)  {nfail[4]++;continue;}
-    if (!spectrometer_mode) {
-      e2out_coll=e2out.Lorentz(p_in_coll);
-      if (e2out.momentum()<spec2mom){ //reject if momentum is too low.
-	nfail[4]++;continue;}
-    }
-    
-    if (spectrometer_mode){//check spectrometer angular acceptances:
-      e1spec = FourVector(e1out[0], e1out[1] * cos(spec1) - e1out[3]*sin(spec1),  
-			e1out[2], e1out[1] * sin(spec1) + e1out[3]*cos(spec1));
-      if (fabs(atan2(e1spec[1],e1spec[3])) > spec1thacc)  {
-      //cout << "e1spec1/3:"<< e1spec[1] << "\t" << e1spec[3] << "\t" << fabs(atan2(e1spec[1],e1spec[3])) << ">" << spec1thacc << "\n";
-      //break;
-	nfail[5]++;continue;}
-      if (fabs(atan2(e1spec[2],e1spec[3])) > spec1phiacc )
-	{
-	  //cout << "e1spec2/3:"<< e1spec[2] << "\t" << e1spec[3] << "\t" << fabs(atan2(e1spec[2],e1spec[3])) << ">" << spec1phiacc << "\n";
-	  //break;
-	  nfail[6]++;continue;
-	} //check spectrometer 1 acceptance.
+
+    //generate detector frame quantities and check acceptance of e2:
+   //if spectrometer, check spectrometer acceptance.  If not, require minimum momentum and eta cut
+    if (spectrometer_mode){
+      if (fabs((e2out.momentum()-spec2mom)/spec2mom)>spec2momacc) {nfail[6]++;continue;}
       e2spec = FourVector(e2out[0], e2out[1] * cos(spec2) - e2out[3]*sin(spec2),
 			  e2out[2], e2out[1] * sin(spec2) + e2out[3]*cos(spec2));
       
       if (fabs(atan2(e2spec[1],e2spec[3])) > spec2thacc)  {nfail[7]++;continue;}
       if (fabs(atan2(e2spec[2],e2spec[3])) > spec2phiacc )  {nfail[8]++;continue;}
     }
-    if (!spectrometer_mode){//check collider frame acceptance in theta (assume rotational symmetry)
-      if (fabs(e1out_coll.theta()-spec1)>spec1thacc) {nfail[5]++;continue;}
-      if (fabs(e2out_coll.theta()-spec2)>spec2thacc) {nfail[7]++;continue;}
+    if (!spectrometer_mode) {
+      e2out_coll=e2out.Lorentz(p_in_coll);
+      if (e2out_coll.momentum()<spec2mom){ nfail[6]++;continue;}
+            if (fabs(e2out_coll.theta()-spec2)>spec2thacc) {nfail[7]++;continue;}
     }
-  
+    
+    FourVector e1_coll_smear=smear(e1out_coll);
+    FourVector e2_coll_smear=smear(e2out_coll);
+    FourVector q_coll_smear=e1_coll_smear+e2_coll_smear;
+    long double smeared_mass=q_coll_smear.mass();
+    
     long double thetaD = e2out.Lorentz(-q_out).rotate(q_out).theta();
     long double phiD   = e2out.Lorentz(-q_out).rotate(q_out).phi();
     long double weight = QEDBackground(e_in,e_out,q_out,m,thetaD,phiD)*Solidangle;
@@ -280,6 +339,7 @@ const FourVector
       id[23]->fill2d(log10(e_out[0]),log10(weight),1.);
       id[24]->fill2d(log10(q_out[0]),log10(weight),1.);
       id[25]->fill2d(log10(q_out_coll[0]),log10(q_out_coll.theta()/deg),weight);
+      id[26]->fill2d(m,smeared_mass,weight);
      sum += weight;
 
       if (!fmod(++accepted,1000)) 
@@ -296,7 +356,7 @@ const FourVector
   cout <<"\n";
   return 0;
   outfile.close();
- }
+    }
 
 int main(int argc, char * argv[])
 {
@@ -442,14 +502,17 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[25]= new Hist("Aprime Energy and angle (collider frame)","log10(E)","log10(theta)",
 	       "weight","log(GeV)","log(deg)","mb",
 		  100, -4,4, 100, -3, 3);
+  id[26]= new Hist("Gen and smeared Aprime mass","mGen","mReco",
+	       "weight","GeV","GeV","mb",
+		  100, 0,10, 100, 0, 10);
 
   // start threads
   pthread_t thread[jobs];
   int seed[jobs];
 
 
-  int nScatterBins=6;
-  long double scatterBin[]={1e-7,1e-6,1e-4,1e-2,1.,10.,180.};
+  int nScatterBins=1;
+  long double scatterBin[]={1e-9,180,1e-7,1e-6,1e-4,1e-2,1.,10.,180.};
   for (int j=0;j<nScatterBins;j++){
     minScatterAngle=scatterBin[j]*deg;
     maxScatterAngle=scatterBin[j+1]*deg;
