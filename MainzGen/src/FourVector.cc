@@ -11,8 +11,8 @@
 
 #include "FourVector.h"
 
-double
-Momentum::specPhi(double angle) const
+long double
+Momentum::specPhi(long double angle) const
 {
   Momentum part = *this;
   part.rot_theta(-angle);
@@ -20,8 +20,8 @@ Momentum::specPhi(double angle) const
   return part.specPhi()*1000;
 }
 
-double
-Momentum::specTheta(double angle) const
+long double
+Momentum::specTheta(long double angle) const
 {
   Momentum part = *this;
   part.rot_theta(-angle);
@@ -30,10 +30,10 @@ Momentum::specTheta(double angle) const
 }
 
 int
-Momentum::specCheck(double pMin, double pMax,
-		      double th0, double dth, double dph) const
+Momentum::specCheck(long double pMin, long double pMax,
+		      long double th0, long double dth, long double dph) const
 {
-  double p = square();
+  long double p = square();
   if (p < pMin*pMin) return 0;
   if (pMax*pMax < p) return 0;
 
@@ -47,21 +47,21 @@ Momentum::specCheck(double pMin, double pMax,
 }
 
 int
-Momentum::specCheck(double pMin, double pMax, double th0,
-		      double thMin, double thMax,
-		      double phMin, double phMax) const
+Momentum::specCheck(long double pMin, long double pMax, long double th0,
+		      long double thMin, long double thMax,
+		      long double phMin, long double phMax) const
 {
-  double p = square();
+  long double p = square();
   if (p < pMin*pMin) return 0;
   if (pMax*pMax < p) return 0;
 
   Momentum part = *this;
   part.rot_theta(-th0);
 
-  double thetaTmp = part.specPhi();
+  long double thetaTmp = part.specPhi();
   if ((thetaTmp < thMin) || (thMax < thetaTmp)) return 0;
 
-  double phiTmp = part.specTheta();
+  long double phiTmp = part.specTheta();
   if ((phiTmp < phMin) || (phMax < phiTmp)) return 0;
 
   return 1;
@@ -84,9 +84,9 @@ FourVector::rotateTo(const Momentum& direction) const
 }
 
 
-FourVector Polar(double E, double p, double theta, double phi)
+FourVector Polar(long double E, long double p, long double theta, long double phi)
 { 
-  double pst = p * sin(theta);
+  long double pst = p * sin(theta);
   return FourVector(E, pst * cos(phi), pst * sin(phi), p * cos(theta));
 }
 
@@ -111,17 +111,17 @@ FourVector rotateTo(FourVector a, FourVector direction)
 }
 
 void
-FourVector::boost(double gamma)
+FourVector::boost(long double gamma)
 {
-  double p0 = E;
-  double beta = sqrt(1-1/(gamma * gamma));
+  long double p0 = E;
+  long double beta = sqrt(1-1/(gamma * gamma));
 
   E    = (p0 + p[2] * beta) * gamma;
   p[2] = (p0 * beta + p[2]) * gamma;
 }
 
 void
-FourVector::boost(double gamma, double theta, double phi)
+FourVector::boost(long double gamma, long double theta, long double phi)
 {
   rot_phi(-phi);
   rot_theta(-theta);
@@ -133,12 +133,12 @@ FourVector::boost(double gamma, double theta, double phi)
 FourVector
 FourVector::Lorentz(const FourVector& reference) const
 { 
-  double   g = reference.gamma();
+  long double   g = reference.gamma();
   Momentum p = *this;
   Momentum beta = reference.beta();
 
-  double beta_p = beta * p;
-  double factor = g * (beta_p * g / (1 + g) + E);
+  long double beta_p = beta * p;
+  long double factor = g * (beta_p * g / (1 + g) + E);
   return FourVector(g * (E + beta_p), p + beta * factor);
 }
 
@@ -148,25 +148,25 @@ Lorentz(FourVector a, FourVector reference)
   return a.Lorentz(reference);
 }
 
-double
+long double
 angle(const Momentum &a, const Momentum &b)
 {
-  double zwerg = a.abs() * b.abs();
+  long double zwerg = a.abs() * b.abs();
   return zwerg == 0 ? 0 : acos(a*b/zwerg);
 }
 
 FourVector
-FourVector::operator+(const double dE) const
+FourVector::operator+(const long double dE) const
 {
   FourVector sum = *this;
 
-  double massSqr = square();
-  double p = momentum();
+  long double massSqr = square();
+  long double p = momentum();
 
   if ((Ekin() < -dE) || (massSqr < 0.0) || (p == 0.0)) return sum;
 
   sum.E += dE;
-  double factor =  ::momentum(sum.E, sqrt(massSqr>0.0 ? massSqr : 0.0))/p;
+  long double factor =  ::momentum(sum.E, sqrt(massSqr>0.0 ? massSqr : 0.0))/p;
   sum.p[0] *= factor;
   sum.p[1] *= factor;
   sum.p[2] *= factor;
@@ -175,17 +175,17 @@ FourVector::operator+(const double dE) const
 }
 
 FourVector
-FourVector::operator-(const double dE) const
+FourVector::operator-(const long double dE) const
 {
   FourVector sum = *this;
 
-  double massSqr = square();
-  double p = momentum();
+  long double massSqr = square();
+  long double p = momentum();
 
   if ((Ekin() < dE) || (massSqr < 0.0) || (p == 0.0)) return sum;
 
   sum.E -= dE;
-  double factor = ::momentum(sum.E, sqrt(massSqr>0 ? massSqr : 0))/p;
+  long double factor = ::momentum(sum.E, sqrt(massSqr>0 ? massSqr : 0))/p;
   sum.p[0] *= factor;
   sum.p[1] *= factor;
   sum.p[2] *= factor;
@@ -194,15 +194,15 @@ FourVector::operator-(const double dE) const
 }
 
 FourVector&
-FourVector::operator+=(const double dE)
+FourVector::operator+=(const long double dE)
 {
-  double massSqr = square();
-  double mom = momentum();
+  long double massSqr = square();
+  long double mom = momentum();
 
   if ((Ekin() < -dE) || (massSqr < 0) || (mom == 0)) return *this;
 
   E += dE;
-  double factor = sqrt(E*E > massSqr ? E * E - massSqr : 0)/mom;
+  long double factor = sqrt(E*E > massSqr ? E * E - massSqr : 0)/mom;
   p[0] *= factor;
   p[1] *= factor;
   p[2] *= factor;
@@ -211,15 +211,15 @@ FourVector::operator+=(const double dE)
 }
 
 FourVector&
-FourVector::operator-=(const double dE)
+FourVector::operator-=(const long double dE)
 {
-  double massSqr = square();
-  double mom = momentum();
+  long double massSqr = square();
+  long double mom = momentum();
 
   if (Ekin() < dE || massSqr < 0 ) return *this;
 
   E -= dE;
-  double factor = sqrt(E*E > massSqr ? E * E - massSqr : 0)/mom;
+  long double factor = sqrt(E*E > massSqr ? E * E - massSqr : 0)/mom;
   p[0] *= factor;
   p[1] *= factor;
   p[2] *= factor;
@@ -269,19 +269,19 @@ FourVector::print(char *comment) const
   std::cout << comment << '\t' << *this << std::endl;
 }
 
-double
+long double
 FourVector::phaseSpace() const
 {
-  double Pxy = p[0] * p[0] + p[1] * p[1];
+  long double Pxy = p[0] * p[0] + p[1] * p[1];
   return sqrt(Pxy * (Pxy + p[2] * p[2])) / (2 * E);
 }
 
 FourVector
-particle(double m, double p, double th0, double th, double ph)
+particle(long double m, long double p, long double th0, long double th, long double ph)
 {
-  double tan_th = tan(th);
-  double tan_ph = tan(ph);
-  double p_z = p / sqrt(1 + square(tan_th) + square(tan_ph));
+  long double tan_th = tan(th);
+  long double tan_ph = tan(ph);
+  long double p_z = p / sqrt(1 + square(tan_th) + square(tan_ph));
 
   FourVector part(energy(p,m), p_z * tan_th, p_z * tan_ph, p_z);
   part.rot_theta(th0);
@@ -290,12 +290,12 @@ particle(double m, double p, double th0, double th, double ph)
 }
 
 FourVector
-particle(double m, double p,
-	 double scat0, double oop0, double scat, double oop)
+particle(long double m, long double p,
+	 long double scat0, long double oop0, long double scat, long double oop)
 {
-  double tan_sca = tan(scat);
-  double tan_oop = tan(oop);
-  double p_z = p / sqrt(1 + square(tan_sca) + square(tan_oop));
+  long double tan_sca = tan(scat);
+  long double tan_oop = tan(oop);
+  long double p_z = p / sqrt(1 + square(tan_sca) + square(tan_oop));
 
   FourVector part(energy(p,m), p_z * tan_sca, p_z * tan_oop, p_z);
   part.rot_theta(M_PI_2);
@@ -305,11 +305,11 @@ particle(double m, double p,
   return part;
 }
 
-double
+long double
 epsilon(const FourVector &in, const FourVector &out)
 {
   FourVector photon = in - out;
-  double q2 = photon.square();
+  long double q2 = photon.square();
 
   return 1/(1 - 0.5 * q2 * (square(photon.energy()) - q2)/
 	      square(in.energy() * out.energy() * sin(out.theta())));

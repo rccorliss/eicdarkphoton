@@ -44,23 +44,23 @@
 
 class Momentum {
 protected:
-  double p[3];
+  long double p[3];
 public:
   /// Constructor
-  Momentum(double x=0, double y=0, double z=0) { 
+  Momentum(long double x=0, long double y=0, long double z=0) { 
     p[0] = x; p[1] = y; p[2] = z; }
   /// Construct a Momentum from an array of floats 
   Momentum(float v[])    { p[0] = v[0]; p[1] = v[1]; p[2] = v[2];}
-  /// Construct a Momentum from an array of doubles 
-  Momentum(double v[])   { p[0] = v[0]; p[1] = v[1]; p[2] = v[2];}
+  /// Construct a Momentum from an array of long doubles 
+  Momentum(long double v[])   { p[0] = v[0]; p[1] = v[1]; p[2] = v[2];}
   /// Dump Momentum into an array of floats
   inline void fill(float v[])  const { v[0] = p[0]; v[1] = p[1]; v[2] = p[2];}
-  /// Dump Momentum into an array of doubles
-  inline void fill(double v[]) const { v[0] = p[0]; v[1] = p[1]; v[2] = p[2];}
+  /// Dump Momentum into an array of long doubles
+  inline void fill(long double v[]) const { v[0] = p[0]; v[1] = p[1]; v[2] = p[2];}
   /// Set explicit the components of Momentum
-  inline void set(double x, double y=0, double z=0) { p[0]=x; p[1]=y; p[2]=z;}
+  inline void set(long double x, long double y=0, long double z=0) { p[0]=x; p[1]=y; p[2]=z;}
   /// Read access to the components of Momentum
-  inline double operator[] (int i) const { return p[i]; }
+  inline long double operator[] (int i) const { return p[i]; }
   /// Add two vectors  \TEX{$\vec{a}+\vec{b}$}
   inline Momentum operator+(const Momentum &m) const {
     return Momentum(p[0]+m.p[0], p[1]+m.p[1], p[2]+m.p[2]); }
@@ -83,22 +83,22 @@ public:
   inline Momentum& operator -= (const Momentum &m) {
     p[0]-=m.p[0]; p[1]-=m.p[1]; p[2]-=m.p[2]; return *this;}
   /// Scalar product \TEX{$\vec{a}\cdot\vec{b}$}
-  inline double operator*(const Momentum &m) const {
+  inline long double operator*(const Momentum &m) const {
     return p[0]*m.p[0] + p[1]*m.p[1] + p[2]*m.p[2]; }
   /// Multiplication with scalar constant \TEX{$\vec{a}\cdot c$}
-  inline Momentum operator*(double d) const {
+  inline Momentum operator*(long double d) const {
     return Momentum(p[0] * d, p[1] * d, p[2] * d); }
   /// Multiplication with scalar constant \TEX{$c \cdot \vec{a}$}
-  friend inline Momentum operator*(double d, Momentum m) {
+  friend inline Momentum operator*(long double d, Momentum m) {
     return m * d; }
   /// \TEX{$\vec{a} = c \cdot \vec{a}$}
-  inline Momentum& operator*=(double d)  {
+  inline Momentum& operator*=(long double d)  {
     p[0] *= d; p[1] *= d; p[2] *= d; return *this; }
   /// \TEX{$\vec{a} = \vec{a} / c$}
-  inline Momentum& operator/=(double d)  {
+  inline Momentum& operator/=(long double d)  {
     p[0] /= d; p[1] /= d; p[2] /= d; return *this; }
   /// \TEX{$\vec{a} / c$}
-  inline Momentum operator/(double d) const {
+  inline Momentum operator/(long double d) const {
     return Momentum(p[0]/d, p[1]/d, p[2]/d); }
   /// Vector product of two vectors  \TEX{$\vec{a} \times \vec{b}$}
   inline Momentum mult(Momentum &a, Momentum &b) {
@@ -106,61 +106,61 @@ public:
 		    a[2]*b[0]-a[0]*b[2],
 		    a[0]*b[1]-a[1]*b[0]); }
   /// Square of the absolute value 
-  inline double square() const {
+  inline long double square() const {
     return p[0] * p[0] + p[1] * p[1] + p[2] * p[2]; }
   /// Absolute Value
-  inline double abs() const {
+  inline long double abs() const {
     return sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]); }
   /// Angle between third component and Momentum 
-  inline double theta() const {
+  inline long double theta() const {
        // original handles small angles poorly:
-    //double mom = abs(); return mom == 0 ? 0 : acos(p[2] / mom); 
-    double sq=square(); return sq==0? 0: atan2(sqrt(sq-p[2]*p[2]),p[2]); }
+    //long double mom = abs(); return mom == 0 ? 0 : acos(p[2] / mom); 
+    long double sq=square(); return sq==0? 0: atan2(sqrt(sq-p[2]*p[2]),p[2]); }
   /// Polar angle between x component and Momentum around z-axis 
-  inline double phi() const {
+  inline long double phi() const {
     return p[0] == 0 && p[1] == 0 ? 0 : atan2(p[1], p[0]); }
   /// Azimuth angle defined in the range \TEX{$\left[-\pi/2,\pi/2\right]$}
-  inline double varPhi() const {
+  inline long double varPhi() const {
     return phi() + (p[0]>0 ? 0 : p[1]>0 ? - M_PI : M_PI); }
   /// Polar angle corresponding to vartheta \TEX{$\left[-\pi,\pi\right]$}
-  inline double varTheta() const {
+  inline long double varTheta() const {
     return p[0]<0 ? -theta() : theta(); }
   /// Initalizes a Momentum with polar coordinates
-  void initPolar(double m, double th, double ph) {
+  void initPolar(long double m, long double th, long double ph) {
     p[0]=p[1]=m*sin(th); p[0]*=cos(ph); p[1]*=sin(ph); p[2]=m*cos(th); }
 
   /// Rotation z-axis 
- inline void rot_phi(double phi) {
+ inline void rot_phi(long double phi) {
     set(p[0] * cos(phi) - p[1] * sin(phi), p[1] * cos(phi) + p[0] * sin(phi), p[2]); }
   /// Rotation y-axis
-  inline void rot_theta(double theta) {
+  inline void rot_theta(long double theta) {
     set(p[0] * cos(theta) + p[2] * sin(theta), p[1], p[2] * cos(theta) - p[0] * sin(theta)); }
 
   /// Deviation from central momentum in \TEX{\%}
-  inline double specDelta(double centMom) const {
+  inline long double specDelta(long double centMom) const {
     return abs()*100/centMom-100; }
   /// Cartesian angle in plane for spectrometer coordinates
-  double specPhi() const {
+  long double specPhi() const {
     return (p[0]==0 && p[2]==0 ? 0 : atan2(p[0], p[2])); }
   /// Cartesian angle out of plane for spectrometer coordinates
-  double specTheta() const {
+  long double specTheta() const {
     return (p[2]==0 && p[1]==0 ? 0 : atan2(p[1], p[2])); }
   /// Spectrometer ccordinates
-  double specPhi(double angle) const;
+  long double specPhi(long double angle) const;
   /// Spectrometer ccordinates
-  double specTheta(double angle) const;
+  long double specTheta(long double angle) const;
   /// Test of spetrometer acceptance
-  int specCheck(double pMin, double pMax,
-		double th0, double dth, double dph) const;
+  int specCheck(long double pMin, long double pMax,
+		long double th0, long double dth, long double dph) const;
   /// Test of spetrometer acceptance (long target)
-  int specCheck(double pMin, double pMax, double th0,
-		double thMin, double thMax, double phMin, double phMax) const;
+  int specCheck(long double pMin, long double pMax, long double th0,
+		long double thMin, long double thMax, long double phMin, long double phMax) const;
   /// IO-Stream Inputoperator
   friend std::istream& operator>>(std::istream&, Momentum&);
   /// IO-Stream Outputoperator
   friend std::ostream& operator<<(std::ostream&, Momentum);
   /// Angle between two vectors
-  friend double angle(const Momentum &, const Momentum &);
+  friend long double angle(const Momentum &, const Momentum &);
 };
 
 /** This class represents a relativistic four vector.
@@ -170,54 +170,54 @@ public:
  */
 class FourVector : public Momentum {
 protected:
-  double E;
+  long double E;
 public:
   /// Constructor 
-  FourVector(double En, Momentum m) { 
+  FourVector(long double En, Momentum m) { 
     E = En; p[0] = m[0]; p[1] = m[1]; p[2] = m[2]; }
   /// Constructor with four components
-  FourVector(double En=0, double px=0, double py=0, double pz=0) {
+  FourVector(long double En=0, long double px=0, long double py=0, long double pz=0) {
     E=En; p[0]=px; p[1]=py; p[2]=pz; }
   /// Constructor with an array of floats
   FourVector(float v[])      { E = v[0]; p[0]=v[1]; p[1]=v[2]; p[2]=v[3]; }
-  /// Constructor with an array of doubles
-  FourVector(double v[])     { E = v[0]; p[0]=v[1]; p[1]=v[2]; p[2]=v[3]; }
+  /// Constructor with an array of long doubles
+  FourVector(long double v[])     { E = v[0]; p[0]=v[1]; p[1]=v[2]; p[2]=v[3]; }
   /// Initalizes a FourVector with polar coordinates
-  void initPolar(double energy, double momentum, double theta, double phi) {
+  void initPolar(long double energy, long double momentum, long double theta, long double phi) {
     E=energy; Momentum::initPolar(momentum, theta, phi);}
   /// Returns a FourVector, initialized by polar coordinates 
-  friend FourVector Polar(double E, double p, double theta, double phi);
+  friend FourVector Polar(long double E, long double p, long double theta, long double phi);
   /// Dump FourVector into array of floats
   void fill(float *v) const  { v[0] = E; Momentum::fill(&v[1]); }
   /// Dump FourVector into array of floats
-  void fill(double *v) const { v[0] = E; Momentum::fill(&v[1]); }
+  void fill(long double *v) const { v[0] = E; Momentum::fill(&v[1]); }
   /// Set the FourVector Energy
-  void setE(const double En) { E = En ;}
+  void setE(const long double En) { E = En ;}
   /// Set the FourVector's Momentum 
   void setP(const Momentum & m) {
     p[0]=m[0]; p[1]=m[1]; p[2]=m[2];}
   /// FourVector's Momentum
   inline Momentum getP(void) {return (Momentum) *this;}
   /// Mass square
-  inline double square() const      { return E*E - Momentum::square(); }
+  inline long double square() const      { return E*E - Momentum::square(); }
   /// Invariant mass 
-  inline double mass() const        { return sqrt(E*E - Momentum::square()); }
+  inline long double mass() const        { return sqrt(E*E - Momentum::square()); }
   /// Lorentz factor \TEX{$\gamma$}
-  inline double gamma() const       { return E / mass(); }
+  inline long double gamma() const       { return E / mass(); }
   /// Just the energy
-  inline double energy() const      { return E; }
+  inline long double energy() const      { return E; }
   /// Just the absolute value of the momentum
-  inline double momentum() const    { return Momentum::abs(); }
+  inline long double momentum() const    { return Momentum::abs(); }
   /// same as square
-  inline double momentumSqr() const { return Momentum::square(); }
+  inline long double momentumSqr() const { return Momentum::square(); }
   /// Relativistic velocity \TEX{$\vec\beta$}
   inline Momentum beta() const      { return (Momentum) *this/E; } 
   /// Kinetic energy
-  double Ekin() const        { double e2=square(); return e2>0?E-sqrt(e2):0; }
+  long double Ekin() const        { long double e2=square(); return e2>0?E-sqrt(e2):0; }
   /// Access to components [0..3]
-  double operator[](int i) const { return i ? p[i-1] : E; }
+  long double operator[](int i) const { return i ? p[i-1] : E; }
   /// Phase space factor
-  double phaseSpace() const;
+  long double phaseSpace() const;
   /// Print fourvector with comment string to cout
   void print(char *comment) const;
   /// Rotate a FourVector into a frame where the given vector defines de Z axis
@@ -225,9 +225,9 @@ public:
   /// Rotate a FourVector in the direction given by another vector
   FourVector rotateTo(const Momentum& direction) const;
   /// Lorentz boost in z-Direction. Obsolete, use method Lorentz()
-  void boost(double gamma);
+  void boost(long double gamma);
   /// Lorentz boost. Obsolete, use method Lorentz
-  void boost(double gamma, double theta, double phi);
+  void boost(long double gamma, long double theta, long double phi);
   /// Lorentz transformation
   FourVector Lorentz(const FourVector&) const;
   /// Comparison
@@ -252,34 +252,34 @@ public:
   inline FourVector operator - () const {
     return FourVector(E, -p[0], -p[1], -p[2]); } 
   /// gauge invariant product a*b
-  inline double     operator * (const FourVector &b) const {
+  inline long double     operator * (const FourVector &b) const {
     return E*b.E - p[0]*b.p[0] - p[1]*b.p[1] - p[2]*b.p[2]; }
   /// scalar multiplication
-  friend inline FourVector operator * (double d, FourVector f)  {
+  friend inline FourVector operator * (long double d, FourVector f)  {
     return f * d; }
   /// scalar multiplication
-  inline FourVector operator * (double d) const {
+  inline FourVector operator * (long double d) const {
     return FourVector(E*d, p[0]*d, p[1]*d, p[2]*d); }
   /// scalar division
-  inline FourVector operator / (double d) const {
+  inline FourVector operator / (long double d) const {
     return FourVector(E/d, p[0]/d, p[1]/d, p[2]/d); }
   /// Increment operator for energylosscorrection
-  FourVector& operator+=(const double dE);
+  FourVector& operator+=(const long double dE);
   /// Decrement operator for energylosscorrection
-  FourVector& operator-=(const double dE);
+  FourVector& operator-=(const long double dE);
   /// Addition operator for energylosscorrection 
-  FourVector  operator+(const double) const;
+  FourVector  operator+(const long double) const;
   /// Subtraction operator for energylosscorrection
-  FourVector  operator-(const double) const;  
+  FourVector  operator-(const long double) const;  
   /// IOStream input operator
   friend std::istream& operator>>(std::istream&, FourVector&);
   /// IOStream output operator
   friend std::ostream& operator<<(std::ostream&, FourVector);
   /// Initalize FourVector from spectrometer coordinates
-  friend FourVector particle(double m, double p,
-			     double th0, double th, double ph);
-  friend FourVector particle(double m, double p, double scat0,
-			     double oop0, double scat, double oop);
+  friend FourVector particle(long double m, long double p,
+			     long double th0, long double th, long double ph);
+  friend FourVector particle(long double m, long double p, long double scat0,
+			     long double oop0, long double scat, long double oop);
   /// Lorentz transformation with FV reference 
   friend FourVector Lorentz(FourVector a, FourVector reference);
   /// Rotate a FourVector
@@ -295,7 +295,7 @@ public:
     @param in incoming electron
     @param out scattered electron
   */
-  friend double epsilon(const FourVector &in, const FourVector &out);
+  friend long double epsilon(const FourVector &in, const FourVector &out);
 };
 
 class RNG;
@@ -315,13 +315,13 @@ public:
   ///
   SimFourVector() { dEnergy = NULL; dAngle = NULL; }
   ///
-  SimFourVector(double dE, double dA, RNG *gen);
+  SimFourVector(long double dE, long double dA, RNG *gen);
   ///
   ~SimFourVector();
   ///
   void init(FourVector v);
   ///
-  void initPolar(double E, double P, double theta, double phi);
+  void initPolar(long double E, long double P, long double theta, long double phi);
 };
 
 /**
@@ -333,10 +333,10 @@ class SimulFourVector : public FourVector {
   static Uniform *dPhi;
 public:
   SimulFourVector(RNG *gen);
-  void init(FourVector v, double dE, double dA);
-  void initPolar(double E, double P, double theta,
-		 double phi, double dE, double dA);
-  void scatter(double dE, double dA);
+  void init(FourVector v, long double dE, long double dA);
+  void initPolar(long double E, long double P, long double theta,
+		 long double phi, long double dE, long double dA);
+  void scatter(long double dE, long double dA);
 };
 
 /**
@@ -350,72 +350,72 @@ public:
   ///
   FourVectorEloss(RNG *gen);
   ///
-  void init(FourVector v, double dA, double dEmp, double dEmean);
+  void init(FourVector v, long double dA, long double dEmp, long double dEmean);
   ///
-  void initPolar(double E, double P, double theta, double phi,
-		 double dA, double dEmp, double dEmean);
+  void initPolar(long double E, long double P, long double theta, long double phi,
+		 long double dA, long double dEmp, long double dEmean);
   ///
-  void scatter(double dA, double dEmp, double dEmean);
+  void scatter(long double dA, long double dEmp, long double dEmean);
 };
 
-inline double square(double x) {  return x*x; }
-inline double cubic(double x)  {  return x*x*x;}
-FourVector Polar(double E, double p, double theta, double phi);
-FourVector particle(double m, double p,
-		    double th0, double th, double ph);
-FourVector particle(double m, double p, double scat0,
-		    double oop0, double scat, double oop);
+inline long double square(long double x) {  return x*x; }
+inline long double cubic(long double x)  {  return x*x*x;}
+FourVector Polar(long double E, long double p, long double theta, long double phi);
+FourVector particle(long double m, long double p,
+		    long double th0, long double th, long double ph);
+FourVector particle(long double m, long double p, long double scat0,
+		    long double oop0, long double scat, long double oop);
 FourVector Lorentz(FourVector a, FourVector reference);
 FourVector rotate(FourVector a, Momentum b);
 FourVector rotate(FourVector a, FourVector b);
 FourVector rotateTo(FourVector a, Momentum b);
 FourVector rotateTo(FourVector a, FourVector b);
-double epsilon(const FourVector &in, const FourVector &out);
+long double epsilon(const FourVector &in, const FourVector &out);
 
 /// relativistic momentum
-inline double
-momentum(double energy, double mass) 
+inline long double
+momentum(long double energy, long double mass) 
 {
   return sqrt(energy*energy-mass*mass);
 }
 
 /// relativistic energy
-inline double
-energy(double momentum, double mass) 
+inline long double
+energy(long double momentum, long double mass) 
 {
   return sqrt(momentum*momentum+mass*mass);
 }
 
-inline double
-lambda(double x, double y, double z)
+inline long double
+lambda(long double x, long double y, long double z)
 {
   return square(x-y-z)-4.0*y*z;
 }
 
 /// velocity \TEX{$|\beta| = |p|/E$}
-inline double
-beta(double momentum, double mass) 
+inline long double
+beta(long double momentum, long double mass) 
 {
   return momentum/sqrt(momentum*momentum+mass*mass);
 }
 
 /// \TEX{$|\beta|^2$}
-inline double
-betaSquare(double momentum, double mass) 
+inline long double
+betaSquare(long double momentum, long double mass) 
 {
   return momentum*momentum/(momentum*momentum+mass*mass);
 }
 
 /// Lorentz gamma \TEX{$\gamma$}
-inline double
-gamma(double momentum, double mass) 
+inline long double
+gamma(long double momentum, long double mass) 
 {
   return sqrt((momentum*momentum)/(mass*mass) + 1);
 }
 
 /// Lorentz gamma \TEX{$\gamma^2$}
-inline double
-gammaSquare(double momentum, double mass) 
+inline long double
+gammaSquare(long double momentum, long double mass) 
 {
   return (momentum*momentum)/(mass*mass) + 1;
 }

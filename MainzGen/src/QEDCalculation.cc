@@ -5,25 +5,29 @@
 
 using namespace std;
 
-static const double alpha         =  1/137.035989561;
-static const double hc            = 0.1973269631;       // GeV fm
-static const double mubarn        = hc * hc * 10000;    // GeV² μbarn
-static const double e             = sqrt(alpha * 4 * M_PI);
-static const double m_electron    =  0.00051099907;     //GeV/c²
-static const double m_muon        =  0.1134289267;      //GeV/c²
-static const double m_heavytarget = 168.514725563;      //GeV/c² for  181Ta
-//static const double m_heavytarget = 0.93827231;
+static const long double alpha         =  1/137.035989561;
+static const long double hc            = 0.1973269631;       // GeV fm
+static const long double mubarn        = hc * hc * 10000;    // GeV² μbarn
+static const long double e             = sqrt(alpha * 4 * M_PI);
+static const long double m_electron    =  0.00051099907;     //GeV/c²
+static const long double m_muon        =  0.1134289267;      //GeV/c²
+//static const long double m_heavytarget = 168.514725563;      //GeV/c² for  181Ta
+static const long double m_heavytarget = 0.93827231;         //GeV/c² for proton
 
 #include "FourVector.h"
 #include "Spinor.h"
 #include <stdlib.h>
 
-//double Z=1;//73;
-double Z=73;
-double A=181;
+//Tantalum 181:
+//long double Z=73;
+//long double A=181;
+
+//proton:
+long double Z=1;
+long double A=1;
 
 /// form factor of solid sphere with radius R
-inline double F_sphere(double q, double R) 
+inline long double F_sphere(long double q, long double R) 
 {
   return q<1e-4 ? 1 : 3/pow(q*R,2)*(sin(q*R)/(q*R)-cos(q*R));
 }
@@ -52,8 +56,8 @@ Calculating the A' production cross section on heavy target
 //   d^5 sigma / ((d Omega_e' * d E')_LAB * (d Omega A')_CMS)
 //   in  mubarn / (sr^2 GeV)
 
-double DMHeavyCS(const FourVector &e_in,  const FourVector &e_out,
-		 const FourVector &q_out, const double mA)
+long double DMHeavyCS(const FourVector &e_in,  const FourVector &e_out,
+		 const FourVector &q_out, const long double mA)
 {
   FourVector p_in    = FourVector(m_heavytarget, 0, 0, 0);  
   FourVector p_out   = e_in - e_out + p_in - q_out;
@@ -61,9 +65,9 @@ double DMHeavyCS(const FourVector &e_in,  const FourVector &e_out,
   FourVector ne1     = e_in  - q_out;             // internal electron line
   FourVector ne2     = e_out + q_out;             // internal electron line
 
-  double q2          = q.square();                // virtual photon q^2 
+  long double q2          = q.square();                // virtual photon q^2 
   Complex i_e3_q2    =  i * e*e*e / q2;           // electron charge -
-  double M_square = 0;
+  long double M_square = 0;
 
   Spinor ei[2] = {Spinor(e_in,  0.5), Spinor(e_in,  -0.5)};
   Spinor eo[2] = {Spinor(e_out, 0.5), Spinor(e_out, -0.5)};
@@ -102,8 +106,8 @@ double DMHeavyCS(const FourVector &e_in,  const FourVector &e_out,
 	}    
       }
   
-  const double c = mubarn/64/pow(2*M_PI, 5)/m_heavytarget; 
-  double s = (p_in + e_in - e_out).square();
+  const long double c = mubarn/64/pow(2*M_PI, 5)/m_heavytarget; 
+  long double s = (p_in + e_in - e_out).square();
   return c 
     * sqrt((s - pow(m_heavytarget + mA,2)) * (s - pow(m_heavytarget - mA,2)))/s
     * e_out.momentum()/e_in.momentum() * M_square/4;
@@ -143,9 +147,9 @@ Calculating the four QED Background graphs:
 //   use "export TRIDENT=2" for trident graphs only.
 //   use "export TRIDENT=3" for interference term only.
 
-double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
-		     const FourVector &q_out, const double mA, 
-		     const double theta_e12, const double phi_e12)
+long double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
+		     const FourVector &q_out, const long double mA, 
+		     const long double theta_e12, const long double phi_e12)
 {
 
 
@@ -153,14 +157,14 @@ double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
   static int graphs = getenv("TRIDENT") ? atoi(getenv("TRIDENT")) : 1;
   static int asymm  = getenv("ANTISYM") ? atoi(getenv("ANTISYM")) : 1;
   
-  double lepton = muon ? m_muon : m_electron;
+  long double lepton = muon ? m_muon : m_electron;
 
   FourVector p_in  = FourVector(m_heavytarget, 0, 0, 0);  
   FourVector p_out = e_in - e_out + p_in - q_out;
   FourVector q_p   = e_in - e_out;
   FourVector q     = p_out - p_in;
 
-  const double peq = sqrt((mA*mA - pow(2*lepton,2))/4);
+  const long double peq = sqrt((mA*mA - pow(2*lepton,2))/4);
   FourVector e1outq = Polar(energy(lepton,peq), peq, 
 			    theta_e12, phi_e12).rotateTo(q_out);
   FourVector e1out = ( e1outq).Lorentz(q_out);
@@ -176,18 +180,18 @@ double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
   Tensor t3 = (dag(ne3) + ID * lepton) / (ne3*ne3 - lepton*lepton);
   Tensor t4 = (dag(ne4) + ID * lepton) / (ne4*ne4 - lepton*lepton);
 
-  double q2    = q.square();         // virtual photon lines
-  double qq2   = q_out.square();
-  double qe2   = q_p.square();
+  long double q2    = q.square();         // virtual photon lines
+  long double qq2   = q_out.square();
+  long double qe2   = q_p.square();
 
   Spinor ei[2] = {Spinor(e_in,  0.5),       Spinor(e_in,  -0.5)};
   Spinor eo[2] = {Spinor(e_out, 0.5),       Spinor(e_out, -0.5)};
   Spinor e1[2] = {Antiparticle(e1out, 0.5), Antiparticle(e1out,-0.5)}; 
   Spinor e2[2] = {Spinor(e2out, 0.5),       Spinor(e2out, -0.5)};
 
-  double F = Z * F_sphere(sqrt(-q.square()), 1.21/hc * pow(A, 1.0/3));
+  long double F = Z * F_sphere(sqrt(-q.square()), 1.21/hc * pow(A, 1.0/3));
 
-  double M_square = 0;
+  long double M_square = 0;
 
   Tensor A12[4][4], A34[4][4];
   for(int mu=0; mu<4; mu++) 
@@ -208,8 +212,8 @@ double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
   Tensor ASt2 = (dag(ASne2) + ID * m_electron) / (ASne2*ASne2 - m_electron*m_electron);
   Tensor ASt3 = (dag(ASne3) + ID * m_electron) / (ASne3*ASne3 - m_electron*m_electron);
   Tensor ASt4 = (dag(ASne4) + ID * m_electron) / (ASne4*ASne4 - m_electron*m_electron);
-  double ASqq2 = ASq_out.square();
-  double ASqe2 = ASq_p.square();
+  long double ASqq2 = ASq_out.square();
+  long double ASqe2 = ASq_p.square();
 
   Tensor ASA12[4][4], ASA34[4][4];
   for(int mu=0; mu<4; mu++) 
@@ -255,9 +259,9 @@ double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
 	  M_square += 2*(real(M_if1)*real(M_if2) +imag(M_if1)*imag(M_if2));
       }
 
-  const double c = mubarn/64/pow(2*M_PI, 8)/m_heavytarget; 
-  double s = (p_in + e_in - e_out).square();
-  double res = c
+  const long double c = mubarn/64/pow(2*M_PI, 8)/m_heavytarget; 
+  long double s = (p_in + e_in - e_out).square();
+  long double res = c
     * sqrt((s - pow(m_heavytarget + mA,2)) * (s - pow(m_heavytarget - mA,2)))/s
     * e_out.momentum()/e_in.momentum()*M_square/2 * peq;
 

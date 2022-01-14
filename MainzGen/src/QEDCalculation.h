@@ -21,8 +21,8 @@ Calculating the A' production cross section on heavy target
 //   q_out:     outgoing A'
 //   mA:        mass of A'
 
-double DMHeavyCS(const FourVector &e_in,  const FourVector &e_out,
-		 const FourVector &q_out, const double mA);
+long double DMHeavyCS(const FourVector &e_in,  const FourVector &e_out,
+		 const FourVector &q_out, const long double mA);
 
 /*
 Calculating the four QED Background graphs:
@@ -48,6 +48,6 @@ Calculating the four QED Background graphs:
 //   theta_e12:
 //   phi_e12:   A' decay angles in A' rest frame
 
-double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
-		     const FourVector &q_out, const double mA, 
-		     const double theta_e12, const double phi_e12);
+long double QEDBackground(const FourVector &e_in,  const FourVector &e_out,
+		     const FourVector &q_out, const long double mA, 
+		     const long double theta_e12, const long double phi_e12);

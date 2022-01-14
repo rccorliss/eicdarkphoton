@@ -6,29 +6,29 @@
 #include "FourVector.h"
 
 class Complex {
-  double Re,Im;
+  long double Re,Im;
 public:
-  Complex(double R=0, double I=0) : Re(R), Im(I) {};
+  Complex(long double R=0, long double I=0) : Re(R), Im(I) {};
 
   inline Complex  operator*(const Complex& b) const {
     return Complex(Re*b.Re-Im*b.Im, Re*b.Im+Im*b.Re);
   };
-  inline Complex  operator*(const double b) const {
+  inline Complex  operator*(const long double b) const {
     return Complex(Re*b, Im*b);
   };
   //???????????????????????
-  inline friend Complex operator*(const double a, const Complex& b) {
+  inline friend Complex operator*(const long double a, const Complex& b) {
     return Complex(a*b.Re, a*b.Im);
   };
   //???????????????????????
   inline Complex& operator*=(const Complex& b) {
-    double f=Re*b.Im+Im*b.Re; Re=Re*b.Re-Im*b.Im; Im=f; return *this;
+    long double f=Re*b.Im+Im*b.Re; Re=Re*b.Re-Im*b.Im; Im=f; return *this;
   };
-  inline Complex operator/(const double b) const {
+  inline Complex operator/(const long double b) const {
     return Complex(Re/b, Im/b);
   }; 
   inline Complex  operator/(const Complex& b) const { 
-    double nenner = b.Re*b.Re + b.Im*b.Im;
+    long double nenner = b.Re*b.Re + b.Im*b.Im;
     return Complex((Re*b.Re+Im*b.Im)/nenner, (-Re*b.Im+Im*b.Re)/nenner);
   };
   inline Complex& operator+=(const Complex& b) {
@@ -39,27 +39,27 @@ public:
   inline Complex operator+(const Complex& b) const {
     return Complex(Re+b.Re, Im+b.Im);
   }; 
-  inline friend Complex operator+(const double a, const Complex& b) {
+  inline friend Complex operator+(const long double a, const Complex& b) {
     return Complex(a+b.Re, b.Im);
   };
-  inline friend Complex operator+(const Complex& b, const double a) {
+  inline friend Complex operator+(const Complex& b, const long double a) {
     return Complex(a+b.Re, b.Im);
   };
   inline        Complex operator-(const Complex& b) const {
     return Complex(Re-b.Re, Im-b.Im);
   };
-  inline friend Complex operator-(const double a, const Complex& b) {
+  inline friend Complex operator-(const long double a, const Complex& b) {
     return Complex(a-b.Re,-b.Im);
   };
-  inline friend Complex operator-(const Complex& b, const double a) {
+  inline friend Complex operator-(const Complex& b, const long double a) {
     return Complex(b.Re-a, b.Im);
   };
   inline friend Complex conj(const Complex& a) {
     return Complex(a.Re, -a.Im);
   }; 
-  inline friend double real(const Complex& a) { return a.Re; }; 
-  inline friend double imag(const Complex& a) { return a.Im; }; 
-  inline friend double norm(const Complex& a) { return a.Re*a.Re+a.Im*a.Im; };
+  inline friend long double real(const Complex& a) { return a.Re; }; 
+  inline friend long double imag(const Complex& a) { return a.Im; }; 
+  inline friend long double norm(const Complex& a) { return a.Re*a.Re+a.Im*a.Im; };
 };
 
 static const Complex i(0,1);
@@ -90,7 +90,7 @@ public:
   Tensor         operator- (const Tensor &     ) const;
   Tensor         operator* (const Tensor &     ) const;
   Tensor         operator* (const Complex &    ) const;
-  Tensor         operator* (const double       ) const;
+  Tensor         operator* (const long double       ) const;
   Tensor         operator/ (const Complex &    ) const;
   Spinor         operator* (const class Spinor&) const;
   Tensor         operator+=(const Tensor &     );
@@ -103,7 +103,7 @@ public:
 extern Tensor sigma[4][4], sigma_gmn[4][4];
 extern const Tensor ID, gam[5], g_mu_nu, Tensor0;
 extern const Complex    gmn[4];
-extern const double  re_gmn[4];
+extern const long double  re_gmn[4];
 
 class Spinor { 
 private:
@@ -114,7 +114,7 @@ public:
     s[0]=s0; s[1]=s1; s[2]=s2; s[3]=s3;
   };
 
-  Spinor(const FourVector& a, const double pol);
+  Spinor(const FourVector& a, const long double pol);
 
   Complex operator[](const int i    ) const { return s[i];};
   Spinor  operator! (               ) const;    // that's the adjoint Spinor
@@ -132,7 +132,7 @@ public:
 
   friend Spinor Tensor::operator*(const Spinor &) const;
   friend std::ostream &operator<<(std::ostream &, const Spinor &);
-  friend Spinor Antiparticle(const FourVector& a, const double pol);
+  friend Spinor Antiparticle(const FourVector& a, const long double pol);
 
 };
 
@@ -168,18 +168,18 @@ inline Spinor Spinor::operator/(const Complex &k) const
 }
 
 inline
-Spinor::Spinor(const FourVector& a, const double pol) 
+Spinor::Spinor(const FourVector& a, const long double pol) 
 {                                         // at the moment polarization is
-    double n = a.energy() + a.mass();     // only possible in direction of p[2]
+    long double n = a.energy() + a.mass();     // only possible in direction of p[2]
     Momentum p(a);
     if (pol>0) *this=Spinor(1, 0, p[2]/n,   Complex(p[0]/n, p[1]/n))*sqrt(n);
     if (pol<0) *this=Spinor(0, 1, Complex(p[0]/n, -p[1]/n), -p[2]/n)*sqrt(n);
 }
 
 inline
-Spinor Antiparticle(const FourVector& a, const double pol) 
+Spinor Antiparticle(const FourVector& a, const long double pol) 
 {                                         // at the moment polarization is
-    double n = a.energy() + a.mass();     // only possible in direction of p[2]
+    long double n = a.energy() + a.mass();     // only possible in direction of p[2]
     Momentum p(a);
     if (pol>0) return Spinor(Complex(p[0]/n, -p[1]/n),-p[2]/n, 0, 1)*sqrt(n);
     else       return Spinor(p[2]/n, Complex(p[0]/n, p[1]/n),  1, 0)*sqrt(n);

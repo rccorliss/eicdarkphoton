@@ -10,23 +10,23 @@
 
 using namespace std;
 
-double m_heavytarget = 168.514728;      //Ta181
-const double m_electron    = 0.000510998928;
-const double deg           = M_PI/180;
+long double m_heavytarget = 168.514728;      //Ta181
+const long double m_electron    = 0.000510998928;
+const long double deg           = M_PI/180;
 
 char   setupname[255];
-double E0, Eion,
+long double E0, Eion,
   spec1, spec1mom, spec1thacc, spec1phiacc, spec1momacc,
   spec2, spec2mom, spec2thacc, spec2phiacc, spec2momacc,
   minct, maxct, minctD, maxctD, minphiD, maxphiD, minE, maxE, minm, maxm;
 
-double maxctScatter,minctScatter,
+long double maxctScatter,minctScatter,
   minScatterAngle,maxScatterAngle; //to subdivide a rapidly falling weight.
 
-double events, allevents, accepted = 0;
-double sum = 0;
+long double events, allevents, accepted = 0;
+long double sum = 0;
 
-const int nHists=24;
+const int nHists=26;
 Hist *id[nHists];
 
 void *integrationpart(void *seed)
@@ -50,10 +50,10 @@ const FourVector
    p_in=p_in_coll.Lorentz(-p_in_coll);
 
  if (talkingThread){
-   printf("sanity check: p_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in_coll[0],p_in_coll[1],p_in_coll[2],p_in_coll[3]);
-   printf("sanity check: e_in_coll=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_in_coll[0],e_in_coll[1],e_in_coll[2],e_in_coll[3]);
-   printf("sanity check: p_in=(%2.2E,%2.2E,%2.2E,%2.2E)\n",p_in[0],p_in[1],p_in[2],p_in[3]);
-   printf("sanity check: e_in=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_in[0],e_in[1],e_in[2],e_in[3]);
+   printf("sanity check: p_in_coll=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",p_in_coll[0],p_in_coll[1],p_in_coll[2],p_in_coll[3]);
+   printf("sanity check: e_in_coll=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",e_in_coll[0],e_in_coll[1],e_in_coll[2],e_in_coll[3]);
+   printf("sanity check: p_in=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",p_in[0],p_in[1],p_in[2],p_in[3]);
+   printf("sanity check: e_in=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",e_in[0],e_in[1],e_in[2],e_in[3]);
 
    FourVector specBounds[4];
    specBounds[0]=FourVector(0,sin(spec1-spec1thacc),0,cos(spec1-spec1thacc));
@@ -66,8 +66,8 @@ const FourVector
    printf(" (collider) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
 	  specBounds[0].theta()/deg,specBounds[1].theta()/deg,
 	  specBounds[2].theta()/deg,specBounds[3].theta()/deg);
-   double beta=p_in_coll.beta()[2];
-   double gamma=p_in_coll.gamma();
+   long double beta=p_in_coll.beta()[2];
+   long double gamma=p_in_coll.gamma();
    //angles for beta~1 particles transform as tan(th')=sin(th)/(gamma(cos(th)-beta):
    // thetaprime=atan2(sin(specBounds[0].theta()),gamma*(cos(specBounds[0].theta())-beta));
   printf(" (fixedtar) e-:  %.3E<TH<%.3E\t e+:  %.3E<TH<%.3E  (degrees)\n",
@@ -91,10 +91,10 @@ const FourVector
     //because we are in a boosted frame, our energy bounds can't really be imported from the setup file without more consideration.  They need to be the CM energies.
    maxE=e_in[0];
    minE=m_electron;
-   if (talkingThread) printf("scattered electron bounds in fixed target frame are %.2E < E < %.2E\n",minE,maxE);
+   if (talkingThread) printf("scattered electron bounds in fixed target frame are %.2LE < E < %.2LE\n",minE,maxE);
    if (talkingThread) {
      printf("scattered electron theta bounds in fixed target frame are %f < cos(th) < %f\n",minctScatter,maxctScatter);
-     printf("scattered electron theta bounds in fixed target frame are %E > 1-cos(th) > %E\n",1.-minctScatter,1.-maxctScatter);
+     printf("scattered electron theta bounds in fixed target frame are %LE > 1-cos(th) > %LE\n",1.-minctScatter,1.-maxctScatter);
    }
  }
 //before my meddling:
@@ -105,11 +105,11 @@ const FourVector
   
   FourVector e_out, q_out, p_out, e1out, e2out, e1spec, e2spec;
   FourVector e_out_coll, q_out_coll, p_out_coll, e1out_coll, e2out_coll;
-  double lepton = m_electron; 
+  long double lepton = m_electron; 
 
 
   //previously this was repeatedly computed inside the loop, but it's a constant, so let's just do it once (c++ standards say this will fall out of scope each time through the loop, so we were repeating this fixed calculation unnecessarily.)
-  const double Solidangle = 1/allevents 
+  const long double Solidangle = 1/allevents 
     * (maxE-minE)                // dE
     * (maxm-minm)                // dm
     * (maxct-minct)*2*M_PI           // d\Omega
@@ -120,29 +120,29 @@ const FourVector
 
   bool scatteringAngleRangeSmall=(maxctScatter-minctScatter)<1e-11;
 
-  double minScatterAngleSq=pow(minScatterAngle,2)/2.;
-  double maxScatterAngleSq=pow(maxScatterAngle,2)/2.;
+  long double minScatterAngleSq=pow(minScatterAngle,2)/2.;
+  long double maxScatterAngleSq=pow(maxScatterAngle,2)/2.;
   if (scatteringAngleRangeSmall & talkingThread){
-    printf("Scattering Range is very small! \n If the scattering bounds %E(rad) and %E(rad) are not both small, consider selecting a different range.\n >>>>  Using cos(x)=1-x^2/2 expansion...\n",minScatterAngle,maxScatterAngle);
+    printf("Scattering Range is very small! \n If the scattering bounds %LE(rad) and %LE(rad) are not both small, consider selecting a different range.\n >>>>  Using cos(x)=1-x^2/2 expansion...\n",minScatterAngle,maxScatterAngle);
   }
  
   
-  double nfail[9]={0.,0.,0.,0.,0.,0.,0.,0.,0.};
+  long double nfail[9]={0.,0.,0.,0.,0.,0.,0.,0.,0.};
   
-  for (double i=1;i<=events;i++) {
+  for (long double i=1;i<=events;i++) {
     
     double rndm[8];
     sobol(rndm);
 
-    double m          = minm + rndm[1]*(maxm-minm); //select a mass for the virtual (or dark) photon
+    long double m          = minm + rndm[1]*(maxm-minm); //select a mass for the virtual (or dark) photon
     if (m < 2*lepton) {nfail[0]++;continue;} //if the mass is below the decay lepton mass, veto
 
-    double E          = minE + rndm[0]*(maxE-minE); //select a total energy for the electron in the fixed target frame
+    long double E          = minE + rndm[0]*(maxE-minE); //select a total energy for the electron in the fixed target frame
     if (E<m_electron)  {nfail[1]++;continue;} //skip if the electron total energy is below the electron mass.  (daughter mass, or is this the spectator?)
 
     //determine the direction of the scattered spectator electron in the fixed target frame
-    double cosThetaScatter=0;
-    double thetae=0;
+    long double cosThetaScatter=0;
+    long double thetae=0;
     if (scatteringAngleRangeSmall){
       //if small, then costh terms will be close to 1.0.  Use cos(x)~1-x^2/2:
       //     cosThetaScatter =minctScatter + rndm[4] *(maxctScatter-minctScatter);
@@ -154,7 +154,7 @@ const FourVector
       thetae=sqrt(maxScatterAngleSq+rndm[4] *(minScatterAngleSq-maxScatterAngleSq));
       cosThetaScatter=cos(thetae);
       if (log10(thetae/deg)<-10.) {
-	printf("log theta <-10:  log=%E, theta=%E maxSQ=%E, minSQ=%E, (minSQ-maxSQ)=%E, rnd=%E)\n",
+	printf("log theta <-10:  log=%LE, theta=%LE maxSQ=%LE, minSQ=%LE, (minSQ-maxSQ)=%LE, rnd=%LE)\n",
 					 log10(thetae/deg),thetae,maxScatterAngleSq,minScatterAngleSq,
 					 (minScatterAngleSq-maxScatterAngleSq),rndm[4]);
 	exit(-1);
@@ -165,35 +165,35 @@ const FourVector
       thetae     = acos(cosThetaScatter); //theta between forward and max allowed
     }
     
-    double phie       = rndm[5]*2*M_PI; //phi between zero and 2pi
+    long double phie       = rndm[5]*2*M_PI; //phi between zero and 2pi
     e_out = Polar(E,momentum(E,m_electron), thetae, phie);
     if (!spectrometer_mode) e_out_coll=e_out.Lorentz(p_in_coll);
 
     //determine the direction of the dark/virtual photon in the center of mass frame
-    double theta      = acos(minct+rndm[2]*(maxct-minct)); //previously max was hardcoded to 1
-    double phi        = rndm[3]*2*M_PI-M_PI;
+    long double theta      = acos(minct+rndm[2]*(maxct-minct)); //previously max was hardcoded to 1
+    long double phi        = rndm[3]*2*M_PI-M_PI;
 
     //determine the direction of the decay positron in the dark/virtual photon frame
-    double thetadecay = acos(minctD + rndm[6]*(maxctD-minctD));
-    double phidecay   = minphiD+rndm[7]*(maxphiD-minphiD);
+    long double thetadecay = acos(minctD + rndm[6]*(maxctD-minctD));
+    long double phidecay   = minphiD+rndm[7]*(maxphiD-minphiD);
    
     FourVector cms = e_in + p_in - e_out;
-    double s = cms.square();
+    long double s = cms.square();
     if (s < pow(m + m_heavytarget, 2))  {
-      // printf("s=%.2E but wanted to make mass %.2E.  electron scatter (fixed frame) E = %.2E (max=%.2E, frac=%.2E)\n",s,m,e_out[0],maxE,e_out[0]/maxE);
-      //printf("sanity check: e_out=(%2.2E,%2.2E,%2.2E,%2.2E)\n",e_out[0],e_out[1],e_out[2],e_out[3]);
-      //printf("sanity check: cms=(%2.2E,%2.2E,%2.2E,%2.2E)\n",cms[0],cms[1],cms[2],cms[3]);
+      // printf("s=%.2LE but wanted to make mass %.2LE.  electron scatter (fixed frame) E = %.2LE (max=%.2LE, frac=%.2LE)\n",s,m,e_out[0],maxE,e_out[0]/maxE);
+      //printf("sanity check: e_out=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",e_out[0],e_out[1],e_out[2],e_out[3]);
+      //printf("sanity check: cms=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",cms[0],cms[1],cms[2],cms[3]);
       // break;
       nfail[2]++;continue;}//skip if center of mass energy is not enough to make the dark photon + target
 
     //calculate the momentum of the virtual/dark photon in the enter of mass frame, using the Kallen triangle function.
-    double kallenTriangle=(s - pow(m + m_heavytarget,2)) * (s - pow(m - m_heavytarget,2));
-    double pAcms = sqrt(kallenTriangle/(4*s) );
+    long double kallenTriangle=(s - pow(m + m_heavytarget,2)) * (s - pow(m - m_heavytarget,2));
+    long double pAcms = sqrt(kallenTriangle/(4*s) );
 
     q_out = Polar(energy(m,pAcms),pAcms, theta, phi).Lorentz(cms);
     if (!spectrometer_mode) q_out_coll=q_out.Lorentz(p_in_coll);
 
-    double peq = sqrt(m*m/4 - lepton*lepton);
+    long double peq = sqrt(m*m/4 - lepton*lepton);
 
     // e1out is positron e2out is electron 
     e1out = Polar(energy(lepton,peq), peq, 
@@ -240,9 +240,9 @@ const FourVector
       if (fabs(e2out_coll.theta()-spec2)>spec2thacc) {nfail[7]++;continue;}
     }
   
-    double thetaD = e2out.Lorentz(-q_out).rotate(q_out).theta();
-    double phiD   = e2out.Lorentz(-q_out).rotate(q_out).phi();
-    double weight = QEDBackground(e_in,e_out,q_out,m,thetaD,phiD)*Solidangle;
+    long double thetaD = e2out.Lorentz(-q_out).rotate(q_out).theta();
+    long double phiD   = e2out.Lorentz(-q_out).rotate(q_out).phi();
+    long double weight = QEDBackground(e_in,e_out,q_out,m,thetaD,phiD)*Solidangle;
 
     if (isnan(weight)) 
       cout << "WARNING: "<<setprecision(10)<<weight<<" "<<thetae<<" "<<phie<<endl;
@@ -277,7 +277,9 @@ const FourVector
       id[20]->fill2d(log10(angle(e1out,e_out)/deg),log10(weight),1.);
       id[21]->fill2d(log10(angle(e2out,e_out)/deg),log10(weight),1.);
       id[22]->fill2d(log10(thetae/deg),rndm[4],1.);
-       id[23]->fill2d(log10(e_out[0]),log10(weight),1.);
+      id[23]->fill2d(log10(e_out[0]),log10(weight),1.);
+      id[24]->fill2d(log10(q_out[0]),log10(weight),1.);
+      id[25]->fill2d(log10(q_out_coll[0]),log10(q_out_coll.theta()/deg),weight);
      sum += weight;
 
       if (!fmod(++accepted,1000)) 
@@ -298,6 +300,7 @@ const FourVector
 
 int main(int argc, char * argv[])
 {
+  
   
   int jobs=1;
   char opt;
@@ -433,6 +436,12 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
   id[23]= new Hist("Spectator Energy (fixed target frame) vs Event Weight","log10(E)","log10(weight)",
 	       "","log(GeV)","log(mb)","",
 		  100, -4,4, 100, minLogWeight, maxLogWeight);
+  id[24]= new Hist("Aprime Energy (fixed target frame) vs Event Weight","log10(E)","log10(weight)",
+	       "","log(GeV)","log(mb)","",
+		  100, -4,4, 100, minLogWeight, maxLogWeight);
+  id[25]= new Hist("Aprime Energy and angle (collider frame)","log10(E)","log10(theta)",
+	       "weight","log(GeV)","log(deg)","mb",
+		  100, -4,4, 100, -3, 3);
 
   // start threads
   pthread_t thread[jobs];
@@ -440,7 +449,7 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
 
 
   int nScatterBins=6;
-  double scatterBin[]={1e-7,1e-6,1e-4,1e-2,1.,10.,180.};
+  long double scatterBin[]={1e-7,1e-6,1e-4,1e-2,1.,10.,180.};
   for (int j=0;j<nScatterBins;j++){
     minScatterAngle=scatterBin[j]*deg;
     maxScatterAngle=scatterBin[j+1]*deg;

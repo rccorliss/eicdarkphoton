@@ -33,7 +33,7 @@ Tensor::operator*(const Complex &b) const
 }
 
 Tensor 
-Tensor::operator*(const double b) const
+Tensor::operator*(const long double b) const
 {
   return Tensor(m[0][0]*b, m[0][1]*b, m[0][2]*b, m[0][3]*b,
 		m[1][0]*b, m[1][1]*b, m[1][2]*b, m[1][3]*b,
@@ -168,7 +168,7 @@ Tensor sigma_gmn[4][4] = {
   {sigma[2][0]*gmn[0], sigma[2][1]*gmn[1], sigma[2][2]*gmn[2], sigma[2][3]*gmn[3]},
   {sigma[3][0]*gmn[0], sigma[3][1]*gmn[1], sigma[3][2]*gmn[2], sigma[3][3]*gmn[3]}};
 
-const double re_gmn[4] = { real(gmn[0]), real(gmn[1]), 
+const long double re_gmn[4] = { real(gmn[0]), real(gmn[1]), 
 			   real(gmn[2]), real(gmn[3]) }; 
 
 //////////////////////////////////////////////////////////////////////////////
