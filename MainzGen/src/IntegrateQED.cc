@@ -544,7 +544,7 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
 		  10, -4,4, 10, -3, 3);
   id[26]= new Hist("Gen and smeared Aprime mass","mGen","mReco-mGen",
 		   "weight","GeV","GeV","mb",
-		  10, 0,20, 10, -1., 1.);
+		  200, 0,20, 50, -1., 1.);
   
   id[27]= new Hist("smeared Aprime mass","mReco","weight",
 		   "GeV","mb",
