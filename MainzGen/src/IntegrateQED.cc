@@ -43,11 +43,14 @@ const char *failure_name4="e1 angle out of bounds";
 const char *failure_name5="(not used in collider)";
 const char *failure_name6="e2 collider energy too low";
 const char *failure_name7="e2 angle out of bounds";
-const char *failure_name8="e1 or e2 smeared to zero.";
+const char *failure_name8="both electrons smeared to zero.";
+const char *failure_name9="positron smeared to zero.";
 
+int nFailModes=10;
 const char *failureNames[]={failure_name0,failure_name1,failure_name2,
 			    failure_name3,failure_name4,failure_name5,
-			    failure_name6,failure_name7,failure_name8};
+			    failure_name6,failure_name7,failure_name8,
+			    failure_name9};
 
 FourVector zerovec=FourVector(0,0,0,0);
 
@@ -204,7 +207,7 @@ const FourVector
   }
  
   
-  long double nfail[9]={0.,0.,0.,0.,0.,0.,0.,0.,0.};
+  long double nfail[10]={0.,0.,0.,0.,0.,0.,0.,0.,0.,0.};
   
   for (long double i=1;i<=events;i++) {
     
@@ -316,10 +319,19 @@ const FourVector
     
     FourVector e1_coll_smear=smear(e1out_coll);
     FourVector e2_coll_smear=smear(e2out_coll);
-    if (e1_coll_smear==zerovec || e2_coll_smear==zerovec) {nfail[8]++; continue;}
-    FourVector q_coll_smear=e1_coll_smear+e2_coll_smear;
-    long double smeared_mass=q_coll_smear.mass();
+    FourVector e0_coll_smear=smear(e_out_coll);//spectator electron
+    if (e2_coll_smear==zerovec && e0_coll_smear==zerovec) {nfail[8]++; continue;}
+    if (e1_coll_smear==zerovec) {nfail[9]++; continue;}
+    bool fille1e0=false,fille1e2=false;
+    if (e0_coll_smear!=zerovec) fille1e0=true;
+    if (e2_coll_smear!=zerovec) fille1e2=true;
     
+    FourVector q_coll_smear=e1_coll_smear+e2_coll_smear;
+    FourVector qoff_coll_smear=e1_coll_smear+e0_coll_smear;
+    long double smeared_mass=q_coll_smear.mass();
+    long double smeared_mass_wrong=qoff_coll_smear.mass();
+
+    //e2 is the electron, and we need it to do the crossing symmetry
     long double thetaD = e2out.Lorentz(-q_out).rotate(q_out).theta();
     long double phiD   = e2out.Lorentz(-q_out).rotate(q_out).phi();
     long double weight = QEDBackground(e_in,e_out,q_out,m,thetaD,phiD)*Solidangle;
@@ -365,7 +377,8 @@ const FourVector
       id[24]->fill2d(log10(q_out[0]),log10(weight),1.);
       id[25]->fill2d(log10(q_out_coll[0]),log10(q_out_coll.theta()/deg),weight);
       id[26]->fill2d(m,smeared_mass-m,weight);
-      id[27]->fill(smeared_mass,weight);
+      if(fille1e0)      id[27]->fill(smeared_mass_wrong,weight); //the wrong pair, but if it's in our acceptance we have to keep it.
+      if(fille1e2)      id[27]->fill(smeared_mass,weight);
       //printf("m=%.2LE,smeared=%.2LE,weight=%.2LE\n",m,smeared_mass,weight);
      sum += weight;
 
@@ -387,7 +400,7 @@ darkphotonxs(m)~sloped, but flat across a bin
   cout << "\r" << fixed<< setprecision(0)<<"\r"<<accepted<<"/" << allevents<< 
     " Thread " <<*(int *)seed<<" done.\n";
   cout <<"Fail matrix: \n";
-  for (int i=0;i<9;i++){
+  for (int i=0;i<nFailModes;i++){
     cout << i<< " " << "\r" << fixed<< setprecision(0)<<"\r"<<nfail[i]<<"  " << failureNames[i]<<"\n";
   }
   cout <<"\n";
@@ -475,7 +488,7 @@ int main(int argc, char * argv[])
   // initialize histograms  
 
 
-  const double minLogAngle=-3, maxLogAngle=1,
+  const double minLogAngle=-3, maxLogAngle=2,
     minLogWeight=-35, maxLogWeight=0;
   //  id[ 0]= new Hist("Dark Photon Mass", "m_{{/Symbol g}''}", "", 
   //		   "GeV", "{/Symbol m}b", (int) ((maxm-minm)/0.0005), minm, maxm);
@@ -541,10 +554,10 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
 		  100, -4,4, 100, minLogWeight, maxLogWeight);
   id[25]= new Hist("Aprime Energy and angle (collider frame)","log10(E)","log10(theta)",
 	       "weight","log(GeV)","log(deg)","mb",
-		  10, -4,4, 10, -3, 3);
+		  100, -4,4, 100, -3, 3);
   id[26]= new Hist("Gen and smeared Aprime mass","mGen","mReco-mGen",
 		   "weight","GeV","GeV","mb",
-		  200, 0,20, 50, -1., 1.);
+		  200, 0,20, 100, -0.2, 0.2);
   
   id[27]= new Hist("smeared Aprime mass","mReco","weight",
 		   "GeV","mb",

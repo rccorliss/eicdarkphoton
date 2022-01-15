@@ -1,10 +1,10 @@
 #SETUPS = EIC1x1 EIC1x5 EIC5x5 EIC5x1 EIC25x5 EIC100x5 EIC250x5 
-SETUPS = EIC1x1
+SETUPS = EIC275x18
 
 #DL45 DL32  DL45sym
 
 JOBS = 4
-EVENTS=1e8
+EVENTS=1e9
 
 all : 	src/IntegrateQED $(SETUPS:%=Integration_%.pdf)  $(SETUPS:%=Signal_%.pdf) 
 
