@@ -86,12 +86,17 @@ void ParseMassHists(){
     int sigbinmin=hMass[i]->GetXaxis()->FindBin(mass[i]-masswindow[i]);
     int sigbinmax=hMass[i]->GetXaxis()->FindBin(mass[i]+masswindow[i]);
     totBg[i]=hBgMass->Integral(bgbin-nBinsToAverage,bgbin+nBinsToAverage)*(1.0/(1.0+2*nBinsToAverage))*(2*masswindow[i]);
+
+    
     totSig[i]=hMass[i]->Integral(sigbinmin,sigbinmax);
+
+    
     windowSigYield[i]=totSig[i]*targetlumi;
     windowOverSmear[i]=windowSigYield[i]/smearSigYield[i];
     ratio[i]=totSig[i]/sqrt(totBg[i])*sqrt(targetlumi);
-    epsilon_reach[i]=targetsig*alpha_d_ref/alpha_qed*sqrt(totBg[i])/sqrt(targetlumi)/totSig[i];
-    epsilon2_reach[i]=epsilon_reach[i]*epsilon_reach[i];
+
+    epsilo2n_reach[i]=targetsig*alpha_d_ref/alpha_qed*sqrt(totBg[i])/sqrt(targetlumi)/totSig[i];
+    epsilon_reach[i]=sqrt(epsilon_reach[i]);
     //mineve=epsmax*alpha*sigtot*L
     //mineve=sigtot*L*alpha_d/alpha_0
     //alpha_d=mineve*alpha_0/(sigtot*L)

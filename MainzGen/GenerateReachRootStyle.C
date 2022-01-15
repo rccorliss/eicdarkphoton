@@ -3,6 +3,10 @@
 const float alpha=1/137.036;
 const float pi=3.14159;
 const float epsilon0=1.;
+const float alphaD0=epsilon0*epsilon0*alpha;
+const float mb=1.;//mbarns as native units for the cross section
+const float fb=1e-12*mb;
+const float nomLumi=100/fb;//100 inverse femtobarns
 
 
 
@@ -109,7 +113,7 @@ void GenerateReachRootStyle(){
     //find the gaussian width of the smeared signal, use that to optimize the window:
     float sigmaErr;
     float sigma=GetGaussianWidth(hTrueMassVsReco, &sigmaErr);
-    float binwidth=GetOptimalWindow(sigma);
+    float windowsize=GetOptimalWindow(sigma);
 
     
 
@@ -118,13 +122,15 @@ void GenerateReachRootStyle(){
     float signal_scale_factor=(3*pi)/(2*N) * (epsilon0*epsilon0)/(alpha) * (binmid)/(binstep);
 
     //sum and rescale the signal in our window:
-    int sigbinmin=hSlice->GetXaxis()->FindBin(-binwidth);
-    int sigbinmax=hSlice->GetXaxis()->FindBin(binwidth);
+    int sigbinmin=hSlice->GetXaxis()->FindBin(-windowsize);
+    int sigbinmax=hSlice->GetXaxis()->FindBin(windowsize);
     float totalsignal=signal_scale_factor*hSlice->Integrate(sigbinmin,sigbinmax);
 
-    
-    float totalbackground=hBgMassReco
+    //average the signal nearby, and multiple by the window:
+    float totalbackground=(2*windowsize)*(hBgMassReco->GetBinContent(bin-1)/binstep+hBgMassReco->GetBinContent(bin+1)/binstep)/(2.);
 
+    //so now we have our signal and background in native units, and we can compute our reach:
+    float eps2=  S*alphaD0/alpha  *  1/sqrt(luminosity)  *  sqrt(totalbackground)/totalsignal;
     
       }
   

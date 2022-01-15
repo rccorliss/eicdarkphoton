@@ -31,9 +31,8 @@ long double maxctScatter,minctScatter,
 long double events, allevents, accepted = 0;
 long double sum = 0;
 
-const int nHists=28;
+const int nHists=34;
 Hist *id[nHists];
-
 
 const char *failure_name0="mass less than lepton rest";
 const char *failure_name1="spectator E less than lepton rest";
@@ -118,6 +117,7 @@ void *integrationpart(void *seed)
   sprintf(outfilename,"part_%d.cvs",*(int *) seed);
   std::ofstream outfile(outfilename,std::ofstream::out);
   bool talkingThread=( (*(int *) seed)==0); //only one thread has to do sanity checks.
+  
 
 const FourVector
   e_in_coll=FourVector(E0,0,0,momentum(E0,m_electron)),
@@ -265,7 +265,18 @@ const FourVector
       //printf("sanity check: e_out=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",e_out[0],e_out[1],e_out[2],e_out[3]);
       //printf("sanity check: cms=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",cms[0],cms[1],cms[2],cms[3]);
       //exit(1);
+      if (talkingThread) {
+	id[29]->fill(m,1);
+	id[31]->fill(log10(E),1);
+	id[33]->fill(thetae/deg,1);
+      }
       nfail[2]++;continue;}//skip if center of mass energy is not enough to make the dark photon + target
+    if (talkingThread) {
+      //    id[28]->fill(m,1);
+      //   id[30]->fill(log10(E),1);
+      //   id[32]->fill(thetae/deg,1);
+ 
+    }
 
     //calculate the momentum of the virtual/dark photon in the enter of mass frame, using the Kallen triangle function.
     long double kallenTriangle=(s - pow(m + m_heavytarget,2)) * (s - pow(m - m_heavytarget,2));
@@ -380,6 +391,10 @@ const FourVector
       if(fille1e0)      id[27]->fill(smeared_mass_wrong,weight); //the wrong pair, but if it's in our acceptance we have to keep it.
       if(fille1e2)      id[27]->fill(smeared_mass,weight);
       //printf("m=%.2LE,smeared=%.2LE,weight=%.2LE\n",m,smeared_mass,weight);
+               id[28]->fill(m,weight);
+         id[30]->fill(log10(E),weight);
+         id[32]->fill(thetae/deg,weight);
+ 
      sum += weight;
 
      /*
@@ -479,8 +494,8 @@ int main(int argc, char * argv[])
   maxphiD *= deg;              // convert to radian
   minctD  = cos(minctD * deg); // we only need the cosine for generator
   maxctD  = cos(maxctD * deg);
-  minct   = cos(minct * deg);
-  maxct   = cos(maxct * deg);
+  minct   = cos(minct * deg); //scattering angle of the virtual photon in the recoiling frame
+  maxct   = cos(maxct * deg);//scattering angle of the virtual photon in the recoiling frame
 
   events = floor(events/jobs); // events per thread
   allevents = events*jobs;     // and the sum of all events
@@ -557,12 +572,29 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
 		  100, -4,4, 100, -3, 3);
   id[26]= new Hist("Gen and smeared Aprime mass","mGen","mReco-mGen",
 		   "weight","GeV","GeV","mb",
-		  200, 0,20, 100, -0.2, 0.2);
+		   200, 0,20, 100, -0.2, 0.2);
   
   id[27]= new Hist("smeared Aprime mass","mReco","weight",
 		   "GeV","mb",
 		   200, 0.,20.);
-
+  id[28]= new Hist("Gen mass that passes","mGen","",
+		   "GeV","",
+		   100, 0.,20.);
+  id[29]= new Hist("Gen mass that fails","mGen","",
+		   "GeV","",
+		   100, 0.,20.);
+  id[30]= new Hist("Gen E that passes","log(E)","",
+		   "GeV","",
+		   100,-2,5);
+  id[31]= new Hist("Gen E that fails","log(E)","",
+		   "GeV","",
+		   100,-2,5);
+  id[32]= new Hist("Gen theta that passes","th","",
+		   "deg","",
+		   100, 0.,180.);
+  id[33]= new Hist("Gen theta that fails","th","",
+		   "deg","",
+		   100, 0.,180.);
   // start threads
   pthread_t thread[jobs];
   int seed[jobs];
