@@ -31,8 +31,25 @@ long double maxctScatter,minctScatter,
 long double events, allevents, accepted = 0;
 long double sum = 0;
 
-const int nHists=27;
+const int nHists=28;
 Hist *id[nHists];
+
+
+const char *failure_name0="mass less than lepton rest";
+const char *failure_name1="spectator E less than lepton rest";
+const char *failure_name2="CM energy too low for A' mass";
+const char *failure_name3="e1 collider energy too low";
+const char *failure_name4="e1 angle out of bounds";
+const char *failure_name5="(not used in collider)";
+const char *failure_name6="e2 collider energy too low";
+const char *failure_name7="e2 angle out of bounds";
+const char *failure_name8="e1 or e2 smeared to zero.";
+
+const char *failureNames[]={failure_name0,failure_name1,failure_name2,
+			    failure_name3,failure_name4,failure_name5,
+			    failure_name6,failure_name7,failure_name8};
+
+FourVector zerovec=FourVector(0,0,0,0);
 
 FourVector smear(const FourVector &x)
 {//take in a four vector and smear it with random values.
@@ -52,10 +69,10 @@ FourVector smear(const FourVector &x)
 
   if (eta<-4.5 || eta>4.5){
     //no tracking or cal.  return a zero vector to indicate the particle was lost.
-    
-    printf("Particle lost!  This should have triggered the earlier cuts!\n");
-    printf("eta=%f, theta=%f\n",eta,theta);
-    exit(-2);
+    //nominally this should be quite rare, but if we mess with the accelerator cuts it'll go off.
+    //printf("Particle lost!  This should have triggered the earlier cuts! ");
+    //printf("eta=%f, theta=%f, lost by %f\n",eta,theta, abs(eta)-4.5);
+    //exit(-2);
     return smeared;
   }
   smeared=x;
@@ -151,7 +168,7 @@ const FourVector
     //because we are in a boosted frame, our energy bounds can't really be imported from the setup file without more consideration.  They need to be the CM energies.
    maxE=e_in[0];
    minE=m_electron;
-   if (talkingThread) printf("scattered electron bounds in fixed target frame are %.2LE < E < %.2LE\n",minE,maxE);
+   if (talkingThread) printf("scattered electron energy bounds in fixed target frame are %.2LE < E < %.2LE\n",minE,maxE);
    if (talkingThread) {
      printf("scattered electron theta bounds in fixed target frame are %LE < cos(th) < %LE\n",minctScatter,maxctScatter);
      printf("scattered electron theta bounds in fixed target frame are %LE > 1-cos(th) > %LE\n",1.-minctScatter,1.-maxctScatter);
@@ -197,8 +214,9 @@ const FourVector
     long double m          = minm + rndm[1]*(maxm-minm); //select a mass for the virtual (or dark) photon
     if (m < 2*lepton) {nfail[0]++;continue;} //if the mass is below the decay lepton mass, veto
 
-    long double E          = minE + rndm[0]*(maxE-minE); //select a total energy for the electron in the fixed target frame
+    long double E          = minE + rndm[0]*(maxE-minE); //select a total energy for the outbound electron in the fixed target frame
     if (E<m_electron)  {nfail[1]++;continue;} //skip if the electron total energy is below the electron mass.  (daughter mass, or is this the spectator?)
+ 
 
     //determine the direction of the scattered spectator electron in the fixed target frame
     long double cosThetaScatter=0;
@@ -243,7 +261,7 @@ const FourVector
       // printf("s=%.2LE but wanted to make mass %.2LE.  electron scatter (fixed frame) E = %.2LE (max=%.2LE, frac=%.2LE)\n",s,m,e_out[0],maxE,e_out[0]/maxE);
       //printf("sanity check: e_out=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",e_out[0],e_out[1],e_out[2],e_out[3]);
       //printf("sanity check: cms=(%2.2LE,%2.2LE,%2.2LE,%2.2LE)\n",cms[0],cms[1],cms[2],cms[3]);
-      // break;
+      //exit(1);
       nfail[2]++;continue;}//skip if center of mass energy is not enough to make the dark photon + target
 
     //calculate the momentum of the virtual/dark photon in the enter of mass frame, using the Kallen triangle function.
@@ -273,7 +291,9 @@ const FourVector
     if (!spectrometer_mode) {
       e1out_coll=e1out.Lorentz(p_in_coll);
       if (e1out_coll.momentum()<spec1mom){nfail[3]++;continue;}
-      if (fabs(e1out_coll.theta()-spec1)>spec1thacc) {nfail[4]++;continue;}
+      if (fabs(e1out_coll.theta()-spec1)>spec1thacc) {
+	//	printf("e1out_coll.theta()=%.3LF  (spec1 center=%.3LF, spec1acc=%.3LF)\n",e1out_coll.theta()/deg,spec1/deg,spec1thacc/deg); exit(1);
+	nfail[4]++;continue;}
     }
     
     e2out = q_out-e1out;
@@ -296,6 +316,7 @@ const FourVector
     
     FourVector e1_coll_smear=smear(e1out_coll);
     FourVector e2_coll_smear=smear(e2out_coll);
+    if (e1_coll_smear==zerovec || e2_coll_smear==zerovec) {nfail[8]++; continue;}
     FourVector q_coll_smear=e1_coll_smear+e2_coll_smear;
     long double smeared_mass=q_coll_smear.mass();
     
@@ -303,6 +324,11 @@ const FourVector
     long double phiD   = e2out.Lorentz(-q_out).rotate(q_out).phi();
     long double weight = QEDBackground(e_in,e_out,q_out,m,thetaD,phiD)*Solidangle;
 
+    //flag that checks if we're doing signal.
+    //if so, then scale weight by 3pi*eps*2*mgamma/binwidth/2N/alpha
+    //N is the ratio of decay widths to leptonic final states.
+    //have to put in a dummy epsilon.
+    
     if (isnan(weight)) 
       cout << "WARNING: "<<setprecision(10)<<weight<<" "<<thetae<<" "<<phie<<endl;
     {
@@ -312,7 +338,6 @@ const FourVector
       }
       static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
       pthread_mutex_lock(&mutex); // filling shared histograms must be locked!
-
       id[ 0]->fill(m, weight);
       id[ 1]->fill(q_out.energy()/E0,                   weight);
       id[ 2]->fill(thetadecay/deg,                      weight);
@@ -339,9 +364,21 @@ const FourVector
       id[23]->fill2d(log10(e_out[0]),log10(weight),1.);
       id[24]->fill2d(log10(q_out[0]),log10(weight),1.);
       id[25]->fill2d(log10(q_out_coll[0]),log10(q_out_coll.theta()/deg),weight);
-      id[26]->fill2d(m,smeared_mass,weight);
+      id[26]->fill2d(m,smeared_mass-m,weight);
+      id[27]->fill(smeared_mass,weight);
+      //printf("m=%.2LE,smeared=%.2LE,weight=%.2LE\n",m,smeared_mass,weight);
      sum += weight;
 
+     /*
+       argument:  xs for a dark photon is ~flat across a true_m bin, as long as true_m>>electron_m
+xs(m) does not change from m to m+deltaM, where deltaM is the bin width, for sane bin choices.
+a real dark photon would be a delta function in true_m, so the total cross section is really the same as the total cross section in ONE true_m bin.  
+
+
+darkphotonxs(m)~sloped, but flat across a bin
+      */
+
+     
       if (!fmod(++accepted,1000)) 
       	cout << fixed<< setprecision(0)<<"\r"<<accepted<<"/" << i << flush;
       pthread_mutex_unlock(&mutex);
@@ -351,7 +388,7 @@ const FourVector
     " Thread " <<*(int *)seed<<" done.\n";
   cout <<"Fail matrix: \n";
   for (int i=0;i<9;i++){
-    cout << i<< " " << "\r" << fixed<< setprecision(0)<<"\r"<<nfail[i]<<"  \n";
+    cout << i<< " " << "\r" << fixed<< setprecision(0)<<"\r"<<nfail[i]<<"  " << failureNames[i]<<"\n";
   }
   cout <<"\n";
   return 0;
@@ -439,14 +476,17 @@ int main(int argc, char * argv[])
 
 
   const double minLogAngle=-3, maxLogAngle=1,
-    minLogWeight=-20, maxLogWeight=10;
+    minLogWeight=-35, maxLogWeight=0;
   //  id[ 0]= new Hist("Dark Photon Mass", "m_{{/Symbol g}''}", "", 
   //		   "GeV", "{/Symbol m}b", (int) ((maxm-minm)/0.0005), minm, maxm);
-id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "", 
-		   "GeV", "$\\mu b$", (int) ((maxm-minm)/0.000025), minm, maxm);
-
+  //id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "", 
+  //		   "GeV", "$\\mu b$", (int) ((maxm-minm)/0.000025), minm, maxm);
   
-  id[ 1]= new Hist("x","", "","","{/Symbol m}b",100,(E0-maxE)/E0,1);
+id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "", 
+		   "GeV", "$\\mu b$", 100, 0., 50.);
+  
+//id[ 1]= new Hist("x","", "","","{/Symbol m}b",100,(E0-maxE)/E0,1);
+  id[ 1]= new Hist("Bjorken x of ep collision","", "","","{/Symbol m}b",100,0,1);
   id[ 2]= new Hist("Decay Angle {/Symbol q}_D","{/Symbol q}_D","","^o","",
 		   200,acos(maxctD)/deg, acos(minctD)/deg);
   id[ 3]= new Hist("Decay Angle {/Symbol f}_D","{/Symbol q}_D","","^o","",
@@ -492,7 +532,7 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
 		  100, minLogAngle,maxLogAngle, 100, minLogWeight, maxLogWeight);  
   id[22]= new Hist("log scattering angle vs rndm[4] (are we able to generate a dist?)","log10(th)","rndm[4]",
 	       "","","","",
-		   100, -10,1, 100, -1, 2.);  
+		   100, -10,3, 100, -1, 2.);  
   id[23]= new Hist("Spectator Energy (fixed target frame) vs Event Weight","log10(E)","log10(weight)",
 	       "","log(GeV)","log(mb)","",
 		  100, -4,4, 100, minLogWeight, maxLogWeight);
@@ -501,10 +541,14 @@ id[ 0]= new Hist("Dark Photon Mass", "$m_{\\gamma}$", "",
 		  100, -4,4, 100, minLogWeight, maxLogWeight);
   id[25]= new Hist("Aprime Energy and angle (collider frame)","log10(E)","log10(theta)",
 	       "weight","log(GeV)","log(deg)","mb",
-		  100, -4,4, 100, -3, 3);
-  id[26]= new Hist("Gen and smeared Aprime mass","mGen","mReco",
-	       "weight","GeV","GeV","mb",
-		  100, 0,10, 100, 0, 10);
+		  10, -4,4, 10, -3, 3);
+  id[26]= new Hist("Gen and smeared Aprime mass","mGen","mReco-mGen",
+		   "weight","GeV","GeV","mb",
+		  10, 0,20, 10, -1., 1.);
+  
+  id[27]= new Hist("smeared Aprime mass","mReco","weight",
+		   "GeV","mb",
+		   200, 0.,20.);
 
   // start threads
   pthread_t thread[jobs];

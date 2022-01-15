@@ -84,7 +84,7 @@ public:
     if (ny)
       out <<"set style data image" <<endl
 	  << "plot  ["<<minx<<":"<<maxx<<"] ["<<miny<<":"<<maxy<<"] '" 
-	  << fn << "' index " << i 
+	  << fn << "' index " <<"\"Histogram "<< title << "\"" 
 	  << " using ("<<minx<<"+$1*"<<(maxx-minx)/nx
 	  <<      "):("<<miny<<"+$2*"<<(maxy-miny)/ny
 	  <<"):3 matrix notitle\n";    
