@@ -1,0 +1,20 @@
+setup                  = EIC5x5
+beam_energy            = 5
+ion_energy	       = 5
+ion_mass	       = 0.938
+e-_angle               = 90.
+e-_momentum            = 0.05
+e-_acceptance_theta    = 89.75
+e-_acceptance_phi      = 360.
+e-_acceptance_momentum = 1.
+e+_angle               = 90.
+e+_momentum            = 0.05
+e+_acceptance_theta    = 89.75
+e+_acceptance_phi      = 360.
+e+_acceptance_momentum = 1.
+max_theta              =  20
+min_theta              =  0
+range_mass             = 0.05 10
+range_decay_phi        = 0 360
+range_decay_theta      = 0 180
+#comment is okay so long as you do not use any of the special words above.  The angular range for electron and positron is based on the pseudorapidity of \pm 4.5 from the 2021 benchmark detector, long before the detector consortia came into being.
